@@ -253,6 +253,10 @@ fn show_items(dialog: &gtk::Dialog, files: Vec<gio::File>, chosen: &Rc<std::cell
     util::order_tabs(&nb, config::get().props_tab_order, |order| config::update(|s| s.props_tab_order = order));
     hide_tabs_by_right_click(&nb);
     nb.show_all();
+    // Its look worked out again: made in a window already shown (an item
+    // dropped in), its pages kept the look of a book without tabs (no
+    // page background, in Adwaita and others) when the tabs came.
+    nb.reset_style();
     // The name field takes no drops: a file dropped on it went to it, which
     // takes only text, and nothing happened. Dropped there, it's now the
     // window's (typing and pasting are as before).

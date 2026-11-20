@@ -35,6 +35,11 @@ gt_ok "Media Info chosen" gt_a11y tab "Media Info"; sleep 2
 gt_check "a.mp4: its Media Info" "$(title a.mp4) $(duration)" "1 2 s 0 ms"
 drop b; gt_shot b
 gt_check "b.mp4 dropped in: its Media Info, at once" "$(title b.mp4) $(duration)" "1 4 s 0 ms"
+# Its page has the theme's page background (white in Adwaita), not the
+# window's grey: a new set of tabs in a window already shown kept the look
+# of tabs without a header, no page background.
+px() { magick "$OUT/b.png" -format "%[hex:p{$1,500}]" info:; }
+gt_check "b.mp4's page has its background" "$([ "$(px 255)" != "$(px 240)" ] && echo yes || echo "no, $(px 255)")" "yes"
 drop sub; gt_shot sub
 gt_check "the folder dropped in: Basic (it has no Media Info)" "$(title sub) $(duration)|" "1 |"
 drop a; gt_shot a
