@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Arkha 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-20 20:35+0100\n"
+"POT-Creation-Date: 2026-11-20 22:25+0100\n"
 "PO-Revision-Date: 2026-11-12 21:59+0100\n"
 "Last-Translator: \n"
 "Language-Team: German\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Language-Name: Deutsch\n"
 
-#: src/actions.rs:12 src/i18n.rs:125 src/keys.rs:58
+#: src/actions.rs:12 src/i18n.rs:154 src/keys.rs:58
 msgid "Open"
 msgstr "Öffnen"
 
@@ -406,7 +406,7 @@ msgid "Backgrounds and Emblems"
 msgstr "Hintergründe und Embleme"
 
 #: src/backgrounds.rs:231 src/bulkrename.rs:566 src/props.rs:86
-#: src/window.rs:2208 src/window.rs:3294 src/window.rs:3400
+#: src/window.rs:2208 src/window.rs:3294 src/window.rs:3401 src/window.rs:3416
 msgid "_Close"
 msgstr "_Schließen"
 
@@ -892,7 +892,7 @@ msgstr "Gelöscht am"
 msgid "Original Location"
 msgstr "Ursprünglicher Ort"
 
-#: src/i18n.rs:128 src/i18n.rs:129 src/i18n.rs:130 src/info.rs:255
+#: src/i18n.rs:157 src/i18n.rs:158 src/i18n.rs:159 src/info.rs:255
 #: src/ops.rs:1572 src/pane.rs:1592 src/pane.rs:4050 src/props.rs:412
 #: src/props.rs:593
 #, rust-format
@@ -1092,7 +1092,7 @@ msgstr "Abbrechen (Suche oder Ortsleiste schließen)"
 msgid "Opening"
 msgstr "Öffnen"
 
-#: src/keys.rs:59 src/window.rs:3437
+#: src/keys.rs:59 src/window.rs:3453
 msgid "Open in new tab"
 msgstr "In neuem Reiter öffnen"
 
@@ -2985,15 +2985,15 @@ msgstr "_Lizenz"
 msgid "_Source Code"
 msgstr "_Quellcode"
 
-#: src/window.rs:3385
+#: src/window.rs:3383
 msgid "Could not open the manual"
 msgstr "Das Handbuch konnte nicht geöffnet werden"
 
-#: src/window.rs:3392
+#: src/window.rs:3397
 msgid "The manual isn’t installed"
 msgstr "Das Handbuch ist nicht installiert"
 
-#: src/window.rs:3393
+#: src/window.rs:3399
 #, rust-format
 msgid ""
 "It wasn’t found in:\n"
@@ -3002,39 +3002,47 @@ msgstr ""
 "Es wurde nicht gefunden in:\n"
 "{places}"
 
-#: src/window.rs:3400 src/window/prefs.rs:824
+#: src/window.rs:3400
+msgid "You can read this version’s manual online instead."
+msgstr "Sie können das Handbuch dieser Version stattdessen online lesen."
+
+#: src/window.rs:3402
+msgid "Read It _Online"
+msgstr "_Online lesen"
+
+#: src/window.rs:3416 src/window/prefs.rs:824
 msgid "Keyboard Shortcuts"
 msgstr "Tastenkürzel"
 
-#: src/window.rs:3436
+#: src/window.rs:3452
 msgid "Mouse"
 msgstr "Maus"
 
-#: src/window.rs:3437
+#: src/window.rs:3453
 msgid "Middle-click a folder"
 msgstr "Mittelklick auf einen Ordner"
 
-#: src/window.rs:3438
+#: src/window.rs:3454
 msgid "Copy / Move / Ask"
 msgstr "Kopieren / Verschieben / Fragen"
 
-#: src/window.rs:3438
+#: src/window.rs:3454
 msgid "Drag with Ctrl / Shift / Alt"
 msgstr "Ziehen mit Strg / Umschalt / Alt"
 
-#: src/window.rs:3439
+#: src/window.rs:3455
 msgid "Ctrl+scroll"
 msgstr "Strg+Mausrad"
 
-#: src/window.rs:3439 src/window/prefs.rs:164
+#: src/window.rs:3455 src/window/prefs.rs:164
 msgid "Zoom"
 msgstr "Zoom"
 
-#: src/window.rs:3440
+#: src/window.rs:3456
 msgid "Back / Forward"
 msgstr "Zurück / Vor"
 
-#: src/window.rs:3440
+#: src/window.rs:3456
 msgid "Back / forward mouse buttons"
 msgstr "Maustasten zurück / vor"
 

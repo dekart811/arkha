@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Arkha 1.2.0-dev\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-20 20:35+0100\n"
+"POT-Creation-Date: 2026-11-20 22:25+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,7 +18,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: src/actions.rs:12 src/i18n.rs:125 src/keys.rs:58
+#: src/actions.rs:12 src/i18n.rs:154 src/keys.rs:58
 msgid "Open"
 msgstr ""
 
@@ -416,7 +416,7 @@ msgid "Backgrounds and Emblems"
 msgstr ""
 
 #: src/backgrounds.rs:231 src/bulkrename.rs:566 src/props.rs:86
-#: src/window.rs:2208 src/window.rs:3294 src/window.rs:3400
+#: src/window.rs:2208 src/window.rs:3294 src/window.rs:3401 src/window.rs:3416
 msgid "_Close"
 msgstr ""
 
@@ -905,7 +905,7 @@ msgstr ""
 msgid "Original Location"
 msgstr ""
 
-#: src/i18n.rs:128 src/i18n.rs:129 src/i18n.rs:130 src/info.rs:255
+#: src/i18n.rs:157 src/i18n.rs:158 src/i18n.rs:159 src/info.rs:255
 #: src/ops.rs:1572 src/pane.rs:1592 src/pane.rs:4050 src/props.rs:412
 #: src/props.rs:593
 #, rust-format
@@ -1105,7 +1105,7 @@ msgstr ""
 msgid "Opening"
 msgstr ""
 
-#: src/keys.rs:59 src/window.rs:3437
+#: src/keys.rs:59 src/window.rs:3453
 msgid "Open in new tab"
 msgstr ""
 
@@ -3018,54 +3018,62 @@ msgstr ""
 msgid "_Source Code"
 msgstr ""
 
-#: src/window.rs:3385
+#: src/window.rs:3383
 msgid "Could not open the manual"
 msgstr ""
 
-#: src/window.rs:3392
+#: src/window.rs:3397
 msgid "The manual isn’t installed"
 msgstr ""
 
-#: src/window.rs:3393
+#: src/window.rs:3399
 #, rust-format
 msgid ""
 "It wasn’t found in:\n"
 "{places}"
 msgstr ""
 
-#: src/window.rs:3400 src/window/prefs.rs:824
+#: src/window.rs:3400
+msgid "You can read this version’s manual online instead."
+msgstr ""
+
+#: src/window.rs:3402
+msgid "Read It _Online"
+msgstr ""
+
+#: src/window.rs:3416 src/window/prefs.rs:824
 msgid "Keyboard Shortcuts"
 msgstr ""
 
-#: src/window.rs:3436
+#: src/window.rs:3452
 msgid "Mouse"
 msgstr ""
 
-#: src/window.rs:3437
+#: src/window.rs:3453
 msgid "Middle-click a folder"
 msgstr ""
 
-#: src/window.rs:3438
+#: src/window.rs:3454
 msgid "Copy / Move / Ask"
 msgstr ""
 
-#: src/window.rs:3438
+#: src/window.rs:3454
 msgid "Drag with Ctrl / Shift / Alt"
 msgstr ""
 
-#: src/window.rs:3439
+#: src/window.rs:3455
 msgid "Ctrl+scroll"
 msgstr ""
 
-#: src/window.rs:3439 src/window/prefs.rs:164
+#: src/window.rs:3455 src/window/prefs.rs:164
 msgid "Zoom"
 msgstr ""
 
-#: src/window.rs:3440
+#: src/window.rs:3456
 msgid "Back / Forward"
 msgstr ""
 
-#: src/window.rs:3440
+#: src/window.rs:3456
 msgid "Back / forward mouse buttons"
 msgstr ""
 

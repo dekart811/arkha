@@ -14,8 +14,9 @@ same on X11 and Wayland, where window titles can't be read otherwise.
                         window whose name or tooltip starts with TEXT (to
                         click it with real input)
     a11y.py dialog-tabs the tab names of its first dialog, in order
-    a11y.py buttons     its first dialog's buttons: "name|on" or "name|off"
-    a11y.py labels      its first dialog's texts (labels), a line each
+    a11y.py buttons     its first dialog's (or message box's) buttons: "name|on"
+                        or "name|off"
+    a11y.py labels      its first dialog's (or message box's) texts, a line each
     a11y.py window-labels  the main windows' texts (status bar, side pane, …)
     a11y.py press-in TITLE TEXT  presses that button in its window TITLE
                         (* for any), as a screen reader would
@@ -147,7 +148,7 @@ def main():
         if what == "where-tab":
             sys.exit(1)
     elif what in ("buttons", "labels"):
-        for d in windows(app, ("dialog",)):
+        for d in windows(app, ("dialog", "alert")):
             roles = ("button", "push button") if what == "buttons" else ("label",)
             for role in roles:
                 for x in find(d, role, []):

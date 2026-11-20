@@ -29,10 +29,16 @@ pub fn build(profile: &Path) {
     let out = profile.join("manual");
     // Made anew: pages taken out of the manual go from it too.
     let _ = std::fs::remove_dir_all(&out);
-    let Ok(dirs) = std::fs::read_dir(SOURCE) else { return };
+    let Ok(dirs) = std::fs::read_dir(SOURCE) else {
+        println!("cargo:rustc-env=ARKHA_MANUAL_LANGUAGES=");
+        return;
+    };
     std::fs::create_dir_all(&out).unwrap();
     let mut dirs: Vec<PathBuf> = dirs.flatten().map(|e| e.path()).filter(|p| p.join("index.md").is_file()).collect();
     dirs.sort();
+    // The languages it's in, for Help → Manual's online pages (see i18n.rs).
+    let languages: Vec<String> = dirs.iter().map(|d| d.file_name().unwrap().to_string_lossy().to_string()).collect();
+    println!("cargo:rustc-env=ARKHA_MANUAL_LANGUAGES={}", languages.join(","));
     for dir in dirs {
         language(&dir, &out.join(dir.file_name().unwrap()));
     }

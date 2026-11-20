@@ -3372,26 +3372,42 @@ impl AppWindow {
     /// application for HTML files).
     fn manual(&self) {
         let window = self.window.upcast_ref::<gtk::Window>();
-        match crate::i18n::manual() {
-            Ok(page) => {
-                let uri = gio::File::for_path(&page).uri();
-                // Not gtk::show_uri_on_window: on Wayland it hands the
-                // window to a desktop portal, warning where there's none.
-                let ctx = self.window.display().app_launch_context();
-                if let Some(c) = &ctx {
-                    c.set_timestamp(gtk::current_event_time());
-                }
-                if let Err(e) = gio::AppInfo::launch_default_for_uri(&uri, ctx.as_ref()) {
-                    util::error_dialog(Some(window), &tr("Could not open the manual"), e.message());
-                }
+        // Not gtk::show_uri_on_window: on Wayland it hands the window to a
+        // desktop portal, warning where there's none.
+        let open = |window: &gtk::Window, uri: &str| {
+            let ctx = window.display().app_launch_context();
+            if let Some(c) = &ctx {
+                c.set_timestamp(gtk::current_event_time());
             }
+            if let Err(e) = gio::AppInfo::launch_default_for_uri(uri, ctx.as_ref()) {
+                util::error_dialog(Some(window), &tr("Could not open the manual"), e.message());
+            }
+        };
+        match crate::i18n::manual() {
+            Ok(page) => open(window, &gio::File::for_path(&page).uri()),
+            // Missing from the package (an AUR helper that built with an old
+            // PKGBUILD left it out): this version's pages online instead.
             Err(looked) => {
                 let places: Vec<String> = looked.iter().map(|d| d.display().to_string()).collect();
-                util::error_dialog(
+                let d = gtk::MessageDialog::new(
                     Some(window),
+                    gtk::DialogFlags::MODAL | gtk::DialogFlags::DESTROY_WITH_PARENT,
+                    gtk::MessageType::Error,
+                    gtk::ButtonsType::None,
                     &tr("The manual isn’t installed"),
-                    &fill(&tr("It wasn’t found in:\n{places}"), &[("places", &places.join("\n"))]),
                 );
+                let found = fill(&tr("It wasn’t found in:\n{places}"), &[("places", &places.join("\n"))]);
+                d.set_secondary_text(Some(&format!("{found}\n\n{}", tr("You can read this version’s manual online instead."))));
+                d.add_button(&tr("_Close"), gtk::ResponseType::Close);
+                d.add_button(&tr("Read It _Online"), gtk::ResponseType::Accept);
+                d.set_default_response(gtk::ResponseType::Accept);
+                d.connect_response(move |d, r| {
+                    d.close();
+                    if r == gtk::ResponseType::Accept {
+                        open(d.transient_for().as_ref().unwrap_or(d.upcast_ref()), &crate::i18n::online_manual());
+                    }
+                });
+                d.show();
             }
         }
     }

@@ -79,6 +79,27 @@ fn manual_dirs(bin: &std::path::Path) -> Vec<PathBuf> {
     [beside, bin.parent().map(|p| p.join("share/arkha/manual"))].into_iter().flatten().collect()
 }
 
+/// The manual online, for when it isn't installed: its first page on GitHub
+/// as it is in this version (a release's tag, a development build's commit),
+/// in the user's language if the manual is written in it, else in English.
+pub fn online_manual() -> String {
+    let languages: Vec<String> = glib::language_names().iter().map(|l| l.to_string()).collect();
+    online_manual_for(env!("CARGO_PKG_VERSION"), env!("ARKHA_BUILD"), env!("ARKHA_MANUAL_LANGUAGES"), &languages)
+}
+
+/// online_manual for a version ("1.2.0", "1.2.0-dev"), a build ("r223,
+/// e150cd3", see build.rs), the manual's languages ("de,en") and the user's.
+fn online_manual_for(version: &str, build: &str, written_in: &str, languages: &[String]) -> String {
+    let at = if !version.contains('-') {
+        format!("v{version}")
+    } else {
+        build.rsplit_once(", ").map(|(_, commit)| commit.to_string()).unwrap_or_else(|| "master".to_string())
+    };
+    let written_in: Vec<&str> = written_in.split(',').collect();
+    let language = languages.iter().map(String::as_str).find(|l| written_in.contains(l)).unwrap_or("en");
+    format!("{}/blob/{at}/docs/manual/{language}/index.md", env!("CARGO_PKG_REPOSITORY"))
+}
+
 fn manual_in(dirs: &[PathBuf], languages: &[String]) -> Option<PathBuf> {
     // The first folder with a manual (always in English): the build
     // folder's, not one installed before.
@@ -137,6 +158,17 @@ mod tests {
         assert_eq!(trn("{n} item", "{n} items", 5), "{n} items");
         assert_eq!(fill(&trn("{n} item", "{n} items", 5), &[("n", &5)]), "5 items");
         assert_eq!(fill("{a} of {b}, {a}", &[("a", &"one"), ("b", &2)]), "one of 2, one");
+    }
+
+    #[test]
+    fn online_manual_of_this_version_in_the_language() {
+        let langs = |l: &[&str]| l.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        let repo = env!("CARGO_PKG_REPOSITORY");
+        let de = langs(&["de_DE.UTF-8", "de_DE", "de", "C"]);
+        assert_eq!(online_manual_for("1.2.0", "r230, 1a2b3c4", "de,en", &de), format!("{repo}/blob/v1.2.0/docs/manual/de/index.md"), "a release: its tag");
+        assert_eq!(online_manual_for("1.2.0-dev", "r223, e150cd3", "de,en", &de), format!("{repo}/blob/e150cd3/docs/manual/de/index.md"), "a development build: its commit");
+        assert_eq!(online_manual_for("1.2.0-dev", "", "de,en", &langs(&["C"])), format!("{repo}/blob/master/docs/manual/en/index.md"), "no build known: master, in English");
+        assert_eq!(online_manual_for("1.2.0", "", "de,en", &langs(&["fr_FR", "fr", "C"])), format!("{repo}/blob/v1.2.0/docs/manual/en/index.md"), "not written in French");
     }
 
     #[test]

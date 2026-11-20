@@ -16,6 +16,7 @@ Thumbnails are kept in `~/.cache/thumbnails`, shared with Caja and other program
 | No Trash, no drives, no network places | They need GVfs (the `gvfs` package; `gvfs-smb`, `gvfs-mtp` and the like for Windows shares and phones). Most desktops have it already. |
 | Extract Here and Compress… are missing | They need an archive manager: Engrampa, File Roller or Xarchiver. |
 | "No terminal found" | Arkha looks for mate-terminal, xfce4-terminal, gnome-terminal, konsole, alacritty, kitty, xterm and others. Install one, or set the `TERMINAL` environment variable to yours. |
+| "The manual isn't installed" | The package was built without it. With an AUR helper, this happens when its copy of the AUR repo is out of date: delete it (for yay `~/.cache/yay/arkha-git`, for paru `~/.cache/paru/clone/arkha-git`) and install again. Meanwhile, **Read It Online** in that message opens this version's manual on GitHub. |
 | No Media Info tab | It needs the `mediainfo` program, and is only shown for the kinds of files ticked in **Preferences → Previews → Media Info**. |
 | Files dragged out of an archive manager aren't extracted | This needs X11: on Wayland, archive managers can't drag files out. File Roller 43 and later can't drag files out at all. |
 | Drives are mounted although automounting is off | Another automounter (udiskie, devmon, ldm, udisks-glue) is running; Arkha tells you once when it finds one. Stop it, or let it do the mounting. |
