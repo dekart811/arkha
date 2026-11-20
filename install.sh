@@ -5,6 +5,8 @@
 set -e
 cd "$(dirname "$0")"
 cargo build --release
+# Nothing installed without the manual (its loop below would pass without it).
+test -f target/release/manual/en/index.html
 PREFIX="${PREFIX:-$HOME/.local}"
 install -Dm755 target/release/arkha "$PREFIX/bin/arkha"
 install -Dm644 arkha.desktop "$PREFIX/share/applications/arkha.desktop"

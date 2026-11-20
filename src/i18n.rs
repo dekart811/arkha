@@ -62,13 +62,21 @@ fn locale_dir() -> Option<PathBuf> {
 /// the folders looked in, for saying so.
 pub fn manual() -> Result<PathBuf, Vec<PathBuf>> {
     let exe = std::env::current_exe().map_err(|_| vec![])?;
-    let bin = exe.parent().ok_or_else(Vec::new)?;
-    let dirs: Vec<PathBuf> = [Some(bin.join("manual")), bin.parent().map(|p| p.join("share/arkha/manual"))].into_iter().flatten().collect();
+    let dirs = manual_dirs(exe.parent().ok_or_else(Vec::new)?);
     // "de_DE.UTF-8", "de_DE", "de", "C": LANGUAGE's first (the language
     // chosen in Preferences is set there), then LC_ALL's, LC_MESSAGES's or
     // LANG's.
     let languages: Vec<String> = glib::language_names().iter().map(|l| l.to_string()).collect();
     manual_in(&dirs, &languages).ok_or(dirs)
+}
+
+/// Where the manual may be for a program in `bin`: next to it (the build
+/// folder, an unpacked prebuilt tarball), and <prefix>/share/arkha/manual.
+/// Not next to it in a bin folder: nothing puts it in /usr/bin, and the
+/// message that it isn't installed would name the place.
+fn manual_dirs(bin: &std::path::Path) -> Vec<PathBuf> {
+    let beside = (bin.file_name() != Some(std::ffi::OsStr::new("bin"))).then(|| bin.join("manual"));
+    [beside, bin.parent().map(|p| p.join("share/arkha/manual"))].into_iter().flatten().collect()
 }
 
 fn manual_in(dirs: &[PathBuf], languages: &[String]) -> Option<PathBuf> {
@@ -129,6 +137,15 @@ mod tests {
         assert_eq!(trn("{n} item", "{n} items", 5), "{n} items");
         assert_eq!(fill(&trn("{n} item", "{n} items", 5), &[("n", &5)]), "5 items");
         assert_eq!(fill("{a} of {b}, {a}", &[("a", &"one"), ("b", &2)]), "one of 2, one");
+    }
+
+    #[test]
+    fn manual_beside_the_program_or_in_share() {
+        let p = |s: &str| PathBuf::from(s);
+        assert_eq!(manual_dirs(&p("/usr/bin")), [p("/usr/share/arkha/manual")], "installed: not /usr/bin/manual");
+        assert_eq!(manual_dirs(&p("/home/u/.local/bin")), [p("/home/u/.local/share/arkha/manual")]);
+        assert_eq!(manual_dirs(&p("/src/arkha/target/release")), [p("/src/arkha/target/release/manual"), p("/src/arkha/target/share/arkha/manual")]);
+        assert_eq!(manual_dirs(&p("/opt/arkha-1.2.0-x86_64")), [p("/opt/arkha-1.2.0-x86_64/manual"), p("/opt/share/arkha/manual")], "an unpacked tarball");
     }
 
     #[test]

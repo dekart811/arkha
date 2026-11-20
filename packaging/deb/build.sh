@@ -27,6 +27,8 @@ for mo in target/release/locale/*/LC_MESSAGES/arkha.mo; do
     [ -e "$mo" ] && install -Dm644 "$mo" "$stage/usr/share/locale/${mo#target/release/locale/}"
 done
 # The manual's pages build.rs made from docs/manual.
+# Never a package without them (the loop below would pass without any).
+test -f target/release/manual/en/index.html
 find target/release/manual -type f | while read -r f; do
     install -Dm644 "$f" "$stage/usr/share/arkha/${f#target/release/}"
 done
