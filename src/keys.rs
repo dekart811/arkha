@@ -193,12 +193,31 @@ pub fn labels(accels: &[String]) -> String {
 }
 
 /// The manual's list of the usual shortcuts (in
-/// docs/manual/en/shortcuts.md, between its markers): a table for each group,
-/// in Markdown, the keys written out as on a keyboard. Checked against
+/// docs/manual/<language>/shortcuts.md, between its markers): a table for
+/// each group, in Markdown, with the keys written out as on a keyboard, in
+/// `lang` ("en", or "de" with the texts from `translated`). Checked against
 /// BINDINGS by a test, which writes it with ARKHA_WRITE_MANUAL=1.
 #[cfg(test)]
-fn manual_table() -> String {
+fn manual_table(lang: &str, translated: &dyn Fn(&str) -> String) -> String {
+    let de = lang == "de";
     let key = |name: &str| -> String {
+        let german = match name {
+            "Ctrl" => "Strg",
+            "Shift" => "Umschalt",
+            "Page_Up" => "Bild auf",
+            "Page_Down" => "Bild ab",
+            "BackSpace" => "Rücktaste",
+            "Return" => "Eingabe",
+            "Delete" => "Entf",
+            "Home" => "Pos1",
+            "Escape" => "Esc",
+            "XF86Back" => "Zurück",
+            "XF86Forward" => "Vor",
+            _ => "",
+        };
+        if de && !german.is_empty() {
+            return german.into();
+        }
         match name {
             "plus" => "+".into(),
             "equal" => "=".into(),
@@ -220,12 +239,13 @@ fn manual_table() -> String {
         let mut rest = accel;
         let mut parts = vec![];
         while let Some(end) = rest.strip_prefix('<').and_then(|r| r.find('>')) {
-            parts.push(rest[1..end + 1].to_string());
+            parts.push(key(&rest[1..end + 1]));
             rest = &rest[end + 2..];
         }
         parts.push(key(rest));
         parts.iter().map(|p| format!("<kbd>{p}</kbd>")).collect::<Vec<_>>().join("+")
     };
+    let (action, keys_heading) = if de { ("Aktion", "Tasten") } else { ("Action", "Keys") };
     let mut groups: Vec<&str> = vec![];
     for b in BINDINGS {
         if !groups.contains(&b.group) {
@@ -234,14 +254,67 @@ fn manual_table() -> String {
     }
     let mut out = String::new();
     for g in groups {
-        out.push_str(&format!("\n## {g}\n\n| Action | Keys |\n|---|---|\n"));
+        out.push_str(&format!("\n## {}\n\n| {action} | {keys_heading} |\n|---|---|\n", translated(g)));
         for b in BINDINGS.iter().filter(|b| b.group == g && !b.defaults.is_empty()) {
             // The keypad's keys are the same as the others.
             let accels: Vec<String> = b.defaults.iter().filter(|a| !a.contains("KP_")).map(|a| keys(a)).collect();
-            out.push_str(&format!("| {} | {} |\n", b.label, accels.join(", ")));
+            out.push_str(&format!("| {} | {} |\n", translated(b.label), accels.join(", ")));
         }
     }
     out
+}
+
+/// The translations in po/<lang>.po: msgid → msgstr (the singular), for
+/// the manual's tables.
+#[cfg(test)]
+fn catalog(lang: &str) -> std::collections::HashMap<String, String> {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(format!("po/{lang}.po"));
+    // One line's string: its quotes off, its escapes undone.
+    let unquote = |l: &str| {
+        let inner = l.trim().strip_prefix('"').and_then(|l| l.strip_suffix('"')).unwrap_or("");
+        let mut out = String::new();
+        let mut chars = inner.chars();
+        while let Some(c) = chars.next() {
+            if c != '\\' {
+                out.push(c);
+                continue;
+            }
+            match chars.next() {
+                Some('n') => out.push('\n'),
+                Some('t') => out.push('\t'),
+                Some(other) => out.push(other),
+                None => {}
+            }
+        }
+        out
+    };
+    let mut map = std::collections::HashMap::new();
+    let (mut id, mut text, mut in_id, mut in_text) = (String::new(), String::new(), false, false);
+    for line in std::fs::read_to_string(path).unwrap().lines() {
+        if let Some(rest) = line.strip_prefix("msgid ") {
+            if !id.is_empty() {
+                map.insert(std::mem::take(&mut id), std::mem::take(&mut text));
+            }
+            id = unquote(rest);
+            text.clear();
+            (in_id, in_text) = (true, false);
+        } else if let Some(rest) = line.strip_prefix("msgstr ").or_else(|| line.strip_prefix("msgstr[0] ")) {
+            text = unquote(rest);
+            (in_id, in_text) = (false, true);
+        } else if line.starts_with('"') {
+            if in_id {
+                id.push_str(&unquote(line));
+            } else if in_text {
+                text.push_str(&unquote(line));
+            }
+        } else {
+            (in_id, in_text) = (false, false);
+        }
+    }
+    if !id.is_empty() {
+        map.insert(id, text);
+    }
+    map
 }
 
 #[cfg(test)]
@@ -250,17 +323,30 @@ mod tests {
 
     #[test]
     fn manual_lists_the_usual_shortcuts() {
-        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("docs/manual/en/shortcuts.md");
-        let text = std::fs::read_to_string(&path).unwrap();
-        let (start, end) = ("<!-- The tables below are made from src/keys.rs. -->\n", "\n<!-- End of the tables. -->");
-        let (before, rest) = text.split_once(start).expect("the start marker");
-        let (table, after) = rest.split_once(end).expect("the end marker");
-        let want = manual_table();
-        if std::env::var_os("ARKHA_WRITE_MANUAL").is_some() {
-            std::fs::write(&path, format!("{before}{start}{want}{end}{after}")).unwrap();
-            return;
+        let docs = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("docs/manual");
+        for lang in ["en", "de"] {
+            let path = docs.join(lang).join("shortcuts.md");
+            let Ok(text) = std::fs::read_to_string(&path) else {
+                assert!(lang != "en", "{} is missing", path.display());
+                continue;
+            };
+            let markers = if lang == "de" {
+                ("<!-- Die Tabellen unten werden aus src/keys.rs gemacht. -->\n", "\n<!-- Ende der Tabellen. -->")
+            } else {
+                ("<!-- The tables below are made from src/keys.rs. -->\n", "\n<!-- End of the tables. -->")
+            };
+            let (start, end) = markers;
+            let (before, rest) = text.split_once(start).expect("the start marker");
+            let (table, after) = rest.split_once(end).expect("the end marker");
+            let po = if lang == "en" { Default::default() } else { catalog(lang) };
+            let translated = |id: &str| po.get(id).filter(|t| !t.is_empty()).cloned().unwrap_or_else(|| id.to_string());
+            let want = manual_table(lang, &translated);
+            if std::env::var_os("ARKHA_WRITE_MANUAL").is_some() {
+                std::fs::write(&path, format!("{before}{start}{want}{end}{after}")).unwrap();
+                continue;
+            }
+            assert!(table == want, "{} doesn't list the shortcuts as they are: ARKHA_WRITE_MANUAL=1 cargo test manual_lists writes them", path.display());
         }
-        assert!(table == want, "{} doesn't list the shortcuts as they are: ARKHA_WRITE_MANUAL=1 cargo test manual_lists writes them", path.display());
     }
 
     #[test]

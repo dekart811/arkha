@@ -2,7 +2,8 @@
 # manual.sh x11|wayland: Help → Manual and F1 open the manual (its first
 # page, built next to the program) in the application for HTML files: here
 # a stand-in "browser" that only notes what it was asked to open. In German
-# (from Preferences) without a German manual, the English one.
+# (from Preferences) the German manual; in a language it isn't written in,
+# the English one.
 GT_A11Y=1
 . "$(dirname "$0")/lib.sh"
 gt_session "$@"
@@ -33,10 +34,18 @@ gt_key F1
 gt_check "F1 opens it too" "$(opened)" "$PAGE"
 gt_quit
 
-# German chosen in Preferences: no German manual (yet), so the English one.
+# German chosen in Preferences: the German manual.
 printf '[General]\nlanguage=de\n' > "$XDG_CONFIG_HOME/arkha/arkha.conf"
 rm -f "$OPENED"
 gt_arkha "$HOME"
 gt_act manual
-gt_check "in German, without a German manual: the English one" "$(opened)" "$PAGE"
+gt_check "in German: the German manual" "$(opened)" "${PAGE%/en/index.html}/de/index.html"
+gt_quit
+
+# A language the manual isn't written in (French): the English one.
+printf '[General]\nlanguage=fr\n' > "$XDG_CONFIG_HOME/arkha/arkha.conf"
+rm -f "$OPENED"
+gt_arkha "$HOME"
+gt_act manual
+gt_check "in French: the English manual" "$(opened)" "$PAGE"
 gt_end
