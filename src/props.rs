@@ -83,22 +83,85 @@ pub fn show(parent: &gtk::Window, files: Vec<gio::File>) {
     if files.is_empty() {
         return;
     }
-    let dialog = gtk::Dialog::with_buttons(
-        Some(&if files.len() == 1 {
-            fill(&tr("{name} Properties"), &[("name", &util::display_name(&files[0]))])
-        } else {
-            fill(&trn("Properties of {n} item", "Properties of {n} items", files.len() as u64), &[("n", &files.len())])
-        }),
-        Some(parent),
-        gtk::DialogFlags::DESTROY_WITH_PARENT,
-        &[(tr("_Close").as_str(), gtk::ResponseType::Close)],
-    );
+    let dialog = gtk::Dialog::with_buttons(None, Some(parent), gtk::DialogFlags::DESTROY_WITH_PARENT, &[(tr("_Close").as_str(), gtk::ResponseType::Close)]);
     // Wide enough for the Emblems page's columns, which fill in later (see fill).
     dialog.set_default_size(620, -1);
     dialog.connect_response(|d, _| d.close());
-    let nb = gtk::Notebook::new();
-    nb.set_border_width(6);
-    dialog.content_area().pack_start(&nb, true, true, 0);
+    // The tab last chosen (by a click or a key), kept for items dropped in.
+    let chosen: Rc<std::cell::RefCell<Option<String>>> = Rc::default();
+    // (Kept with the window for the note field, which passes files dropped
+    // on it to the window: see file_drops_to_window.)
+    unsafe { dialog.set_data(CHOSEN, chosen.clone()) };
+    if !show_items(&dialog, files, &chosen) {
+        util::error_dialog(Some(parent), &tr("Could not read properties"), &tr("The file may have been removed."));
+        dialog.close();
+        return;
+    }
+    // Items dragged into the window are shown in it instead, on the tab
+    // chosen before if they have it (Media Info of one video, then of the
+    // next): no window to close and open again for each.
+    dialog.drag_dest_set(gtk::DestDefaults::ALL, &[gtk::TargetEntry::new("text/uri-list", gtk::TargetFlags::empty(), 0)], gdk::DragAction::COPY | gdk::DragAction::MOVE | gdk::DragAction::LINK);
+    dialog.connect_drag_data_received(|d, _, _, _, data, _, _| show_dropped(d, data));
+    dialog.show_all();
+}
+
+/// Where a Properties window keeps the tab chosen last (see show).
+const CHOSEN: &str = "arkha-props-chosen";
+
+/// Items dropped into the window (on it or its note field): shown in it.
+fn show_dropped(dialog: &gtk::Dialog, data: &gtk::SelectionData) {
+    let files: Vec<gio::File> = data.uris().iter().map(|u| gio::File::for_uri(u)).collect();
+    let Some(chosen) = (unsafe { dialog.data::<Rc<std::cell::RefCell<Option<String>>>>(CHOSEN) }).map(|c| unsafe { c.as_ref() }.clone()) else { return };
+    if !files.is_empty() && !show_items(dialog, files, &chosen) {
+        util::error_dialog(Some(dialog.upcast_ref()), &tr("Could not read properties"), &tr("The file may have been removed."));
+    }
+}
+
+/// The note field passes files dropped on it to the window, as the rest of
+/// the window takes them: it took the drop itself, wanting only text, and
+/// nothing happened. (Its own drops can't just be turned off: it sets them
+/// up again whenever its text changes.) Text dropped on it is its own.
+fn file_drops_to_window(view: &gtk::TextView, dialog: &gtk::Dialog) {
+    let files = |ctx: &gdk::DragContext| ctx.list_targets().iter().any(|t| t.name() == "text/uri-list");
+    view.connect_drag_motion(move |_, ctx, _, _, time| {
+        if !files(ctx) {
+            return false;
+        }
+        ctx.drag_status(gdk::DragAction::COPY, time);
+        true
+    });
+    view.connect_drag_drop(move |v, ctx, _, _, time| {
+        if !files(ctx) {
+            return false;
+        }
+        // GTK hands over only data the field's list of targets names: for
+        // this drop, files too (the field makes the list anew as it likes).
+        let uris = gdk::Atom::intern("text/uri-list");
+        if let Some(list) = v.drag_dest_get_target_list() {
+            list.add(&uris, 0, 0);
+        }
+        v.drag_get_data(ctx, &uris, time);
+        true
+    });
+    let d = dialog.downgrade();
+    view.connect_drag_data_received(move |v, ctx, _, _, data, _, time| {
+        if data.target().name() != "text/uri-list" {
+            return;
+        }
+        v.stop_signal_emission_by_name("drag-data-received");
+        ctx.drag_finish(true, false, time);
+        if let Some(d) = d.upgrade() {
+            // Once the drop is over: the field goes with the tab.
+            let data = data.clone();
+            glib::idle_add_local_once(move || show_dropped(&d, &data));
+        }
+    });
+}
+
+/// Fills `dialog` with the properties of `files` (replacing what it
+/// showed), on the tab `chosen` if they have it. False if none can be read
+/// (vanished): then it shows what it did.
+fn show_items(dialog: &gtk::Dialog, files: Vec<gio::File>, chosen: &Rc<std::cell::RefCell<Option<String>>>) -> bool {
 
     // Not the metadata (emblems, notes, a custom icon): metadata.rs reads
     // it, and the pages that show it are filled when it comes.
@@ -112,9 +175,21 @@ pub fn show(parent: &gtk::Window, files: Vec<gio::File>) {
         })
         .unzip();
     if infos.is_empty() {
-        util::error_dialog(Some(parent), &tr("Could not read properties"), &tr("The file may have been removed."));
-        return;
+        return false;
     }
+    dialog.set_title(&if files.len() == 1 {
+        fill(&tr("{name} Properties"), &[("name", &util::display_name(&files[0]))])
+    } else {
+        fill(&trn("Properties of {n} item", "Properties of {n} items", files.len() as u64), &[("n", &files.len())])
+    });
+    // What it showed goes: its tabs end what they had going (a note being
+    // typed is saved, checksums being worked out stop).
+    for old in dialog.content_area().children().into_iter().filter(|c| c.is::<gtk::Notebook>()) {
+        unsafe { old.destroy() };
+    }
+    let nb = gtk::Notebook::new();
+    nb.set_border_width(6);
+    dialog.content_area().pack_start(&nb, true, true, 0);
 
     let img = gtk::Image::new();
     if let Some(pb) = icons::icon_pixbuf(icons::item_icon(&infos[0], &[]).as_ref(), 64) {
@@ -126,7 +201,7 @@ pub fn show(parent: &gtk::Window, files: Vec<gio::File>) {
     let shown = |id: &str| !hidden.iter().any(|h| h == id);
     // Each item's metadata, once read.
     let metas: Rc<std::cell::RefCell<Option<Vec<Meta>>>> = Rc::default();
-    add_page(&nb, &basic_page(&dialog, &files, &infos, &img, &metas), "basic", &tr("Basic"));
+    add_page(&nb, &basic_page(dialog, &files, &infos, &img, &metas), "basic", &tr("Basic"));
     // Filled once the metadata is read (below).
     let emblems_slot = reading_page();
     if shown("emblems") {
@@ -134,11 +209,11 @@ pub fn show(parent: &gtk::Window, files: Vec<gio::File>) {
     }
     let notes_slot = reading_page();
     if shown("permissions") && infos.iter().all(|i| i.has_attribute("unix::mode")) {
-        add_page(&nb, &permissions_page(&dialog, &files, &infos), "permissions", &tr("Permissions"));
+        add_page(&nb, &permissions_page(dialog, &files, &infos), "permissions", &tr("Permissions"));
     }
     if shown("open-with") && files.len() == 1 && infos[0].file_type() != gio::FileType::Directory {
         if let Some(ctype) = util::info_content_type(&infos[0]) {
-            add_page(&nb, &open_with_page(&dialog, &infos[0], &ctype), "open-with", &tr("Open With"));
+            add_page(&nb, &open_with_page(dialog, &infos[0], &ctype), "open-with", &tr("Open With"));
         }
     }
     if shown("notes") && files.len() == 1 {
@@ -151,6 +226,8 @@ pub fn show(parent: &gtk::Window, files: Vec<gio::File>) {
             let found: Vec<Meta> = found.into_iter().map(|(_, m)| m).collect();
             replace_contents(&emblems_slot, &emblems_page(&d, &files, found.iter().map(|m| m.emblems.clone()).collect()));
             replace_contents(&notes_slot, &notes_page(&d, &files[0], &found.first().map(|m| m.note.clone()).unwrap_or_default()));
+            // (Filled after the rest: their fields too.)
+            no_drops_in_fields(emblems_slot.upcast_ref());
             if let Some(pb) = found.first().and_then(|m| icons::icon_pixbuf(icons::item_icon(&m.applied_to(&info), &[]).as_ref(), 64)) {
                 img.set_from_pixbuf(Some(&pb));
             }
@@ -168,14 +245,44 @@ pub fn show(parent: &gtk::Window, files: Vec<gio::File>) {
 
     // ------------------------------------------------------------ Checksums
     if shown("checksums") && files.len() == 1 && infos[0].file_type() == gio::FileType::Regular {
-        let page = checksums_page(&dialog, &files[0], infos[0].size().max(0) as u64);
+        let page = checksums_page(&files[0], infos[0].size().max(0) as u64);
         add_page(&nb, &page, "checksums", &tr("Checksums"));
     }
 
     // Draggable into another order, which is kept, as in Rename All.
     util::order_tabs(&nb, config::get().props_tab_order, |order| config::update(|s| s.props_tab_order = order));
     hide_tabs_by_right_click(&nb);
-    dialog.show_all();
+    nb.show_all();
+    // The name field takes no drops: a file dropped on it went to it, which
+    // takes only text, and nothing happened. Dropped there, it's now the
+    // window's (typing and pasting are as before).
+    no_drops_in_fields(nb.upcast_ref());
+    // The tab chosen before, if these items have it (else Basic, the first,
+    // and the choice is kept for the next ones that have it).
+    if let Some(want) = chosen.borrow().clone() {
+        if let Some(i) = (0..nb.n_pages()).find(|&i| nb.nth_page(Some(i)).is_some_and(|p| p.widget_name() == want)) {
+            nb.set_current_page(Some(i));
+        }
+    }
+    // From now on (adding the tabs selected the first one by itself).
+    let chosen = chosen.clone();
+    nb.connect_switch_page(move |_, page, _| {
+        *chosen.borrow_mut() = Some(page.widget_name().to_string());
+    });
+    true
+}
+
+/// `w` and what's in it: text entries take no drops (see show_items; the
+/// note field passes them on, see file_drops_to_window).
+fn no_drops_in_fields(w: &gtk::Widget) {
+    if w.is::<gtk::Entry>() {
+        w.drag_dest_unset();
+    }
+    if let Some(c) = w.downcast_ref::<gtk::Container>() {
+        for child in c.children() {
+            no_drops_in_fields(&child);
+        }
+    }
 }
 
 /// The Basic tab: the icon (a click picks another), the name (editable for
@@ -540,7 +647,7 @@ fn open_with_page(dialog: &gtk::Dialog, info: &gio::FileInfo, ctype: &str) -> gt
 /// buttons wait), with a progress bar, the time left and Cancel; Copy puts
 /// the result on the clipboard. Calculate All works out all those without a
 /// result (all again if each has one) in a single read of the file.
-fn checksums_page(dialog: &gtk::Dialog, file: &gio::File, size: u64) -> gtk::Box {
+fn checksums_page(file: &gio::File, size: u64) -> gtk::Box {
     use crate::checksums;
     let page = gtk::Box::new(gtk::Orientation::Vertical, 12);
     page.set_border_width(12);
@@ -577,10 +684,10 @@ fn checksums_page(dialog: &gtk::Dialog, file: &gio::File, size: u64) -> gtk::Box
             }
         });
     }
-    // Closing the window stops what's running.
+    // Closing the window, or showing other items in it, stops what's running.
     {
         let running = running.clone();
-        dialog.connect_destroy(move |_| {
+        page.connect_destroy(move |_| {
             if let Some(c) = running.borrow().as_ref() {
                 c.cancel();
             }
@@ -1342,6 +1449,7 @@ fn emblems_page(dialog: &gtk::Dialog, files: &[gio::File], keywords: Vec<Vec<Str
 /// saved as it's typed. Items with one get the note emblem.
 fn notes_page(dialog: &gtk::Dialog, file: &gio::File, note: &str) -> gtk::Widget {
     let view = gtk::TextView::new();
+    file_drops_to_window(&view, dialog);
     view.set_wrap_mode(gtk::WrapMode::WordChar);
     view.set_left_margin(6);
     view.set_right_margin(6);
@@ -1378,7 +1486,8 @@ fn notes_page(dialog: &gtk::Dialog, file: &gio::File, note: &str) -> gtk::Widget
             })));
         });
     }
-    dialog.connect_destroy(move |_| {
+    // (Also when other items are shown in the window: the tab goes then.)
+    view.connect_destroy(move |_| {
         if let Some(id) = pending.take() {
             id.remove();
         }
