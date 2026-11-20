@@ -74,6 +74,16 @@
 
   <!-- Each release gets a line, newest first (see BUILDING.md). -->
   <releases>
+    <release version="1.2.0" date="2026-11-20">
+      <description>
+        <p>A manual, and Properties that follow what you drop on them:</p>
+        <ul>
+          <li>Help, Manual (F1) opens Arkha's manual in the web browser: what Arkha can do and where to find it, in English and German, installed with Arkha and read offline. If it's missing from the package, this version's manual can be read online.</li>
+          <li>A file or folder dragged into an open Properties window is shown in it, on the tab chosen before; a note still being typed is saved first.</li>
+          <li>The messages about files too big for FAT32 drives are translated into German.</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.1.0" date="2026-11-19">
       <description>
         <p>Safer, with thumbnails that keep up with your files:</p>
