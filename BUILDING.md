@@ -23,6 +23,8 @@ cargo run --release              # try it
 
 Uninstalling also gives folders back to the application `--default` replaced.
 
+The build also makes the manual's HTML pages, from `docs/manual` into `target/release/manual/` (with the `pulldown-cmark` crate, which Cargo fetches like the others); Help → Manual opens them there when Arkha runs from the build folder, and in `<prefix>/share/arkha/manual/` once installed, as `install.sh` and the packages put them.
+
 ## Packaging Arkha for a distribution
 
 Always build a distribution's package from a release's git tag (`v1.0.0`): a checkout of the tag, or GitHub's tarball of it, built with `cargo build --release --locked` so that the crates are exactly the ones in `Cargo.lock`.
@@ -42,7 +44,7 @@ The AUR packages are in `packaging/aur/`, each folder with its `PKGBUILD` and `.
 
 - `arkha` builds the latest release from its sources (GitHub's tarball of the tag `v<version>`);
 - `arkha-git` builds the newest commit on `master`;
-- `arkha-bin` installs the release's prebuilt program (`arkha-<version>-x86_64.tar.gz` on the release page: `arkha`, `arkha.desktop`, `arkha.svg`, the AppStream metainfo, `locale/`, `LICENSE` and `README.md` in a folder `arkha-<version>-x86_64/`).
+- `arkha-bin` installs the release's prebuilt program (`arkha-<version>-x86_64.tar.gz` on the release page: `arkha`, `arkha.desktop`, `arkha.svg`, the AppStream metainfo, `locale/`, `manual/`, `LICENSE` and `README.md` in a folder `arkha-<version>-x86_64/`).
 
 Any of the three can be installed instead of the others. After changing a `PKGBUILD`, write its `.SRCINFO` again with `makepkg --printsrcinfo > .SRCINFO`.
 
@@ -72,7 +74,7 @@ A release: set the version in `Cargo.toml` (`1.0.0`), add the release to `data/i
 
 ## Prebuilt program
 
-`packaging/tarball/build.sh` builds `target/tarball/arkha-<version>-<arch>.tar.gz`, the program as the release page has it for `arkha-bin`: it runs from its folder, with its translations. It's for installing Arkha on your own computer, not for building a distribution's package from (see [Packaging Arkha for a distribution](#packaging-arkha-for-a-distribution)).
+`packaging/tarball/build.sh` builds `target/tarball/arkha-<version>-<arch>.tar.gz`, the program as the release page has it for `arkha-bin`: it runs from its folder, with its translations and manual. It's for installing Arkha on your own computer, not for building a distribution's package from (see [Packaging Arkha for a distribution](#packaging-arkha-for-a-distribution)).
 
 ## Optional dependencies
 

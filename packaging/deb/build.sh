@@ -26,6 +26,10 @@ install -Dm644 data/io.github.dekart811.Arkha.metainfo.xml "$stage/usr/share/met
 for mo in target/release/locale/*/LC_MESSAGES/arkha.mo; do
     [ -e "$mo" ] && install -Dm644 "$mo" "$stage/usr/share/locale/${mo#target/release/locale/}"
 done
+# The manual's pages build.rs made from docs/manual.
+find target/release/manual -type f | while read -r f; do
+    install -Dm644 "$f" "$stage/usr/share/arkha/${f#target/release/}"
+done
 install -Dm644 README.md "$stage/usr/share/doc/arkha/README.md"
 # Debian keeps the GPL's text in base-files' /usr/share/common-licenses.
 cat > "$stage/usr/share/doc/arkha/copyright" <<EOF

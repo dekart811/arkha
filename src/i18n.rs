@@ -56,6 +56,29 @@ fn locale_dir() -> Option<PathBuf> {
     [bin.join("locale"), bin.parent()?.join("share/locale")].into_iter().find(has_catalogs)
 }
 
+/// The manual's first page (see build/manual.rs) in the user's language,
+/// else in English: next to the program when it's run from the build folder
+/// (target/release/manual), else in <prefix>/share/arkha/manual. Err holds
+/// the folders looked in, for saying so.
+pub fn manual() -> Result<PathBuf, Vec<PathBuf>> {
+    let exe = std::env::current_exe().map_err(|_| vec![])?;
+    let bin = exe.parent().ok_or_else(Vec::new)?;
+    let dirs: Vec<PathBuf> = [Some(bin.join("manual")), bin.parent().map(|p| p.join("share/arkha/manual"))].into_iter().flatten().collect();
+    // "de_DE.UTF-8", "de_DE", "de", "C": LANGUAGE's first (the language
+    // chosen in Preferences is set there), then LC_ALL's, LC_MESSAGES's or
+    // LANG's.
+    let languages: Vec<String> = glib::language_names().iter().map(|l| l.to_string()).collect();
+    manual_in(&dirs, &languages).ok_or(dirs)
+}
+
+fn manual_in(dirs: &[PathBuf], languages: &[String]) -> Option<PathBuf> {
+    // The first folder with a manual (always in English): the build
+    // folder's, not one installed before.
+    let dir = dirs.iter().find(|d| d.join("en/index.html").is_file())?;
+    let wanted = languages.iter().map(String::as_str).filter(|l| *l != "C" && *l != "POSIX").chain(["en"]);
+    wanted.map(|l| dir.join(l).join("index.html")).find(|p| p.is_file())
+}
+
 /// `msgid` in the user's language (as it is if there's no translation).
 pub fn tr(msgid: &str) -> String {
     // gettext("") is the catalog's header.
@@ -106,5 +129,27 @@ mod tests {
         assert_eq!(trn("{n} item", "{n} items", 5), "{n} items");
         assert_eq!(fill(&trn("{n} item", "{n} items", 5), &[("n", &5)]), "5 items");
         assert_eq!(fill("{a} of {b}, {a}", &[("a", &"one"), ("b", &2)]), "one of 2, one");
+    }
+
+    #[test]
+    fn manual_in_the_language_else_english() {
+        let t = crate::testutil::TestDir::new("i18n-manual");
+        let (build, installed) = (t.0.join("build"), t.0.join("share"));
+        let page = |d: &PathBuf, l: &str| {
+            std::fs::create_dir_all(d.join(l)).unwrap();
+            std::fs::write(d.join(l).join("index.html"), "").unwrap();
+            d.join(l).join("index.html")
+        };
+        let dirs = [build.clone(), installed.clone()];
+        let langs = |l: &[&str]| l.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        assert_eq!(manual_in(&dirs, &langs(&["de_DE.UTF-8", "de_DE", "de", "C"])), None, "none there");
+        let en = page(&installed, "en");
+        assert_eq!(manual_in(&dirs, &langs(&["de_DE.UTF-8", "de_DE", "de", "C"])), Some(en.clone()), "English for want of German");
+        assert_eq!(manual_in(&dirs, &langs(&["C"])), Some(en.clone()));
+        let de = page(&installed, "de");
+        assert_eq!(manual_in(&dirs, &langs(&["de_DE.UTF-8", "de_DE", "de", "C"])), Some(de), "the language's");
+        assert_eq!(manual_in(&dirs, &langs(&["fr_FR", "fr", "C"])), Some(en), "English for want of French");
+        let built = page(&build, "en");
+        assert_eq!(manual_in(&dirs, &langs(&["de", "C"])), Some(built), "the build folder's, not one installed before");
     }
 }

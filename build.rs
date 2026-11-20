@@ -5,16 +5,21 @@
 //! msgfmt), where Arkha finds them when run from the build folder and the
 //! PKGBUILD and install.sh take them from, and lists them for Preferences
 //! (src/i18n.rs) by the name in their X-Language-Name header. Without
-//! msgfmt, Arkha is built in English only.
+//! msgfmt, Arkha is built in English only. And it makes the manual's HTML
+//! pages (see build/manual.rs).
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
+
+#[path = "build/manual.rs"]
+mod manual;
 
 fn main() {
     println!("cargo:rustc-env=ARKHA_BUILD={}", build_id().unwrap_or_default());
     println!("cargo:rerun-if-changed=po");
     let out = PathBuf::from(std::env::var("OUT_DIR").unwrap());
     let profile = profile_dir();
+    manual::build(&profile);
     let mut po: Vec<PathBuf> = std::fs::read_dir("po")
         .map(|d| d.flatten().map(|e| e.path()).filter(|p| p.extension().is_some_and(|e| e == "po")).collect())
         .unwrap_or_default();

@@ -70,6 +70,16 @@ Arkha's texts are translated with gettext. Each language is a file in `po/` (`po
 - **In the code:** a text people see is written `tr("…")`, one with a number in it `trn("{n} file", "{n} files", n)`, a text in a table `n_("…")` (translated where it's shown); values go in named places filled by `fill()` (`fill(&tr("Copying “{name}”"), &[("name", &name)])`), so a translation can order the words its own way. A comment starting `TRANSLATORS:` right above it is shown to translators.
 - Keep each `{name}` and the `_` of a menu shortcut (`_File`) in a translation; `msgfmt --check` checks the places. The GUI tests always run in English.
 
+## The manual
+
+The manual (Help → Manual) is written in Markdown, in `docs/manual/en/`, one file a page; GitHub shows it as it is. `build.rs` (with `build/manual.rs`) turns it into HTML pages in `target/release/manual/`, with `docs/manual/style.css`, which the packages install in `/usr/share/arkha/manual/`.
+
+- **A change people will notice** (a new feature, a changed menu, a new setting) goes into the manual in the same commit.
+- **Pages** come in the order `index.md` links to them. Link to another page as to its file, `[Views](views.md)`, or to a heading on it, `views.md#zoom` (GitHub's anchors: lower case, spaces as hyphens, no punctuation). The build warns about links to pages or headings that aren't there, and about links outside the manual (those should be web addresses).
+- **Pictures** are the README's screenshots (`docs/screenshots/`, in light and dark: see `window.md` for the `<picture>` to use) or the manual's own, in `docs/manual/images/`.
+- **The keyboard shortcuts' tables** in `shortcuts.md` are made from `src/keys.rs`: a test fails when they differ, and `ARKHA_WRITE_MANUAL=1 cargo test manual_lists` writes them again.
+- **A translation** goes into `docs/manual/<code>/` (`de` for German), with the same file names. Help → Manual opens the pages in Arkha's language when there are any, else the English ones.
+
 ## Code layout
 
 | File | What it does |
@@ -77,6 +87,7 @@ Arkha's texts are translated with gettext. Each language is a file in `po/` (`po
 | `src/main.rs` | GtkApplication setup, command-line paths |
 | `src/i18n.rs` | Translations: `tr()`, `trn()`, `n_()`, `fill()`, the language chosen in Preferences |
 | `build.rs`, `po/` | The translations (`po/<language>.po`, template `po/arkha.pot`), built into catalogs; `tools/update-po.sh` refreshes them |
+| `build/manual.rs`, `docs/manual/` | The manual, from Markdown into HTML pages (see [The manual](#the-manual)) |
 | `src/window.rs` | Main window, toolbar, path bar, tabs, all commands |
 | `src/window/menus.rs` | The menu bar and the context menus |
 | `src/window/prefs.rs` | Preferences, and the editors for menus, places, bookmarks, shortcuts, thumbnailers and custom actions |

@@ -25,6 +25,10 @@ libc = "0.2"
 pango = { version = "0.18", features = ["v1_44"] }
 regex = "1"
 
+[build-dependencies]
+# The manual's pages (docs/manual) into HTML; see build.rs.
+pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
+
 [profile.release]
 lto = "thin"
 strip = true

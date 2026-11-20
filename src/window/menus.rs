@@ -81,6 +81,7 @@ impl AppWindow {
         bar.append_submenu(Some(&tr("_Bookmarks")), &bm);
 
         let help = gio::Menu::new();
+        help.append(Some(&tr("_Manual")), Some("win.manual"));
         help.append(Some(&tr("_Keyboard Shortcuts")), Some("win.shortcuts"));
         help.append(Some(&tr("_About")), Some("win.about"));
         bar.append_submenu(Some(&tr("_Help")), &help);

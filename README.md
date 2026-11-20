@@ -38,7 +38,7 @@ A fast graphical file manager for Linux, modelled on Caja (MATE). It uses your d
 - **In English and German,** following your system's language or the one you choose.
 - **Light and quick:** it opens big folders with less CPU and memory than Caja and Nemo ([measured](#speed)).
 
-The [full list of features](docs/FEATURES.md) has every detail.
+The [full list of features](docs/FEATURES.md) has every detail, and [the manual](docs/manual/en/index.md) explains how to use them (in Arkha: Help → Manual, F1).
 
 ## Speed
 

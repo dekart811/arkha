@@ -14,6 +14,11 @@ install -Dm644 data/io.github.dekart811.Arkha.metainfo.xml "$PREFIX/share/metain
 for mo in target/release/locale/*/LC_MESSAGES/arkha.mo; do
     [ -e "$mo" ] && install -Dm644 "$mo" "$PREFIX/share/locale/${mo#target/release/locale/}"
 done
+# The manual's pages the build made from docs/manual (gone ones too).
+rm -rf "$PREFIX/share/arkha/manual"
+find target/release/manual -type f | while read -r f; do
+    install -Dm644 "$f" "$PREFIX/share/arkha/${f#target/release/}"
+done
 # Only where the theme has a cache, which then has to know the new icon.
 [ -f "$PREFIX/share/icons/hicolor/icon-theme.cache" ] && gtk-update-icon-cache -q "$PREFIX/share/icons/hicolor" 2>/dev/null || true
 update-desktop-database "$PREFIX/share/applications" 2>/dev/null || true

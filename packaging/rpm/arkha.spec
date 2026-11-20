@@ -50,6 +50,10 @@ install -Dm644 data/io.github.dekart811.Arkha.metainfo.xml %{buildroot}%{_metain
 for mo in target/release/locale/*/LC_MESSAGES/arkha.mo; do
     [ -e "$mo" ] && install -Dm644 "$mo" "%{buildroot}%{_datadir}/locale/${mo#target/release/locale/}"
 done
+# The manual's pages build.rs made from docs/manual.
+find target/release/manual -type f | while read -r f; do
+    install -Dm644 "$f" "%{buildroot}%{_datadir}/arkha/${f#target/release/}"
+done
 %find_lang %{name}
 
 %files -f %{name}.lang
@@ -59,3 +63,4 @@ done
 %{_datadir}/applications/arkha.desktop
 %{_datadir}/icons/hicolor/scalable/apps/arkha.svg
 %{_metainfodir}/io.github.dekart811.Arkha.metainfo.xml
+%{_datadir}/arkha/

@@ -475,8 +475,8 @@ impl AppWindow {
         let location_entry = gtk::Entry::new();
         location_entry.set_hexpand(true);
         location_entry.set_placeholder_text(Some(&tr("Type a path, e.g. ~/Documents or /etc")));
-        // Ctrl+F: a search field in place of the path, as in Caja. Typing
-        // shows only the matching items of the open folder.
+        // Ctrl+F: a search field in place of the path, as in Caja (Enter
+        // searches; see the search bar's signals).
         let search_field = gtk::Entry::new();
         search_field.set_hexpand(true);
         search_field.set_icon_from_icon_name(gtk::EntryIconPosition::Secondary, Some("edit-find-symbolic"));
@@ -1157,6 +1157,7 @@ impl AppWindow {
         self.add("backgrounds", |w| crate::backgrounds::show(w.window.upcast_ref()));
         self.add("about", |w| w.about());
         self.add("shortcuts", |w| w.shortcuts());
+        self.add("manual", |w| w.manual());
 
         self.add_toggle("show-hidden", s.show_hidden, |_, v| {
             config::update(|s| s.show_hidden = v);
@@ -3365,6 +3366,34 @@ impl AppWindow {
             }
         });
         d.show();
+    }
+
+    /// Help → Manual: its first page in the web browser (the default
+    /// application for HTML files).
+    fn manual(&self) {
+        let window = self.window.upcast_ref::<gtk::Window>();
+        match crate::i18n::manual() {
+            Ok(page) => {
+                let uri = gio::File::for_path(&page).uri();
+                // Not gtk::show_uri_on_window: on Wayland it hands the
+                // window to a desktop portal, warning where there's none.
+                let ctx = self.window.display().app_launch_context();
+                if let Some(c) = &ctx {
+                    c.set_timestamp(gtk::current_event_time());
+                }
+                if let Err(e) = gio::AppInfo::launch_default_for_uri(&uri, ctx.as_ref()) {
+                    util::error_dialog(Some(window), &tr("Could not open the manual"), e.message());
+                }
+            }
+            Err(looked) => {
+                let places: Vec<String> = looked.iter().map(|d| d.display().to_string()).collect();
+                util::error_dialog(
+                    Some(window),
+                    &tr("The manual isn’t installed"),
+                    &fill(&tr("It wasn’t found in:\n{places}"), &[("places", &places.join("\n"))]),
+                );
+            }
+        }
     }
 
     fn shortcuts(&self) {

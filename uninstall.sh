@@ -18,6 +18,8 @@ done
 for mo in "$PREFIX"/share/locale/*/LC_MESSAGES/arkha.mo; do
     [ -e "$mo" ] && rm -f "$mo"
 done
+rm -rf "$PREFIX/share/arkha/manual"
+rmdir "$PREFIX/share/arkha" 2>/dev/null || true
 [ "$removed" = 1 ] || echo "Arkha isn't installed in $PREFIX."
 update-desktop-database "$PREFIX/share/applications" 2>/dev/null || true
 [ -f "$PREFIX/share/icons/hicolor/icon-theme.cache" ] && gtk-update-icon-cache -q "$PREFIX/share/icons/hicolor" 2>/dev/null || true

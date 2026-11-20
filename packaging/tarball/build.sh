@@ -3,7 +3,7 @@
 # arkha-bin installs: target/tarball/arkha-<version>-<arch>.tar.gz with a
 # folder arkha-<version>-<arch>/ holding arkha (it runs from there too, with
 # its translations), arkha.desktop, arkha.svg, the AppStream metainfo
-# (io.github.dekart811.Arkha.metainfo.xml), locale/, LICENSE and
+# (io.github.dekart811.Arkha.metainfo.xml), locale/, manual/, LICENSE and
 # README.md. <version> is Cargo.toml's. Needs what building Arkha needs (see
 # BUILDING.md).
 set -e
@@ -33,6 +33,11 @@ if [ ! -d "$out/$name/locale" ]; then
     for f in target/release/build/arkha-*/out/languages.rs; do echo "$f:" >&2; cat "$f" >&2; done
     exit 1
 fi
+# The manual's pages build.rs made from docs/manual (Arkha finds them
+# next to it, as the translations).
+cp -r target/release/manual "$out/$name/manual"
+[ -f "$out/$name/manual/en/index.html" ] || { echo "build.sh: no manual in target/release/manual" >&2; exit 1; }
+chmod -R u=rwX,go=rX "$out/$name/manual"
 # The same archive for the same files: sorted, with plain owners and times.
 tar -C "$out" --sort=name --owner=0 --group=0 --numeric-owner \
     --mtime="@$(git log -1 --format=%ct 2>/dev/null || date +%s)" \

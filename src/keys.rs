@@ -115,6 +115,7 @@ pub const BINDINGS: &[Binding] = &[
     b(n_("Bookmarks and Help"), "win.add-bookmark", n_("Add bookmark"), &["<Ctrl>d"]),
     b(n_("Bookmarks and Help"), "win.edit-bookmarks", n_("Edit bookmarks"), &["<Ctrl>b"]),
     b(n_("Bookmarks and Help"), "win.preferences", n_("Preferences"), &[]),
+    b(n_("Bookmarks and Help"), "win.manual", n_("Manual"), &["F1"]),
     b(n_("Bookmarks and Help"), "win.shortcuts", n_("Keyboard shortcuts"), &["<Ctrl>question", "<Ctrl>F1"]),
     b(n_("Bookmarks and Help"), "win.about", n_("About"), &[]),
 ];
@@ -191,9 +192,76 @@ pub fn labels(accels: &[String]) -> String {
         .join(", ")
 }
 
+/// The manual's list of the usual shortcuts (in
+/// docs/manual/en/shortcuts.md, between its markers): a table for each group,
+/// in Markdown, the keys written out as on a keyboard. Checked against
+/// BINDINGS by a test, which writes it with ARKHA_WRITE_MANUAL=1.
+#[cfg(test)]
+fn manual_table() -> String {
+    let key = |name: &str| -> String {
+        match name {
+            "plus" => "+".into(),
+            "equal" => "=".into(),
+            "minus" => "-".into(),
+            "question" => "?".into(),
+            "BackSpace" => "Backspace".into(),
+            "Return" => "Enter".into(),
+            "Left" => "←".into(),
+            "Right" => "→".into(),
+            "Up" => "↑".into(),
+            "Down" => "↓".into(),
+            "XF86Back" => "Back".into(),
+            "XF86Forward" => "Forward".into(),
+            n if n.chars().count() == 1 => n.to_uppercase(),
+            n => n.replace('_', " "),
+        }
+    };
+    let keys = |accel: &str| -> String {
+        let mut rest = accel;
+        let mut parts = vec![];
+        while let Some(end) = rest.strip_prefix('<').and_then(|r| r.find('>')) {
+            parts.push(rest[1..end + 1].to_string());
+            rest = &rest[end + 2..];
+        }
+        parts.push(key(rest));
+        parts.iter().map(|p| format!("<kbd>{p}</kbd>")).collect::<Vec<_>>().join("+")
+    };
+    let mut groups: Vec<&str> = vec![];
+    for b in BINDINGS {
+        if !groups.contains(&b.group) {
+            groups.push(b.group);
+        }
+    }
+    let mut out = String::new();
+    for g in groups {
+        out.push_str(&format!("\n## {g}\n\n| Action | Keys |\n|---|---|\n"));
+        for b in BINDINGS.iter().filter(|b| b.group == g && !b.defaults.is_empty()) {
+            // The keypad's keys are the same as the others.
+            let accels: Vec<String> = b.defaults.iter().filter(|a| !a.contains("KP_")).map(|a| keys(a)).collect();
+            out.push_str(&format!("| {} | {} |\n", b.label, accels.join(", ")));
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn manual_lists_the_usual_shortcuts() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("docs/manual/en/shortcuts.md");
+        let text = std::fs::read_to_string(&path).unwrap();
+        let (start, end) = ("<!-- The tables below are made from src/keys.rs. -->\n", "\n<!-- End of the tables. -->");
+        let (before, rest) = text.split_once(start).expect("the start marker");
+        let (table, after) = rest.split_once(end).expect("the end marker");
+        let want = manual_table();
+        if std::env::var_os("ARKHA_WRITE_MANUAL").is_some() {
+            std::fs::write(&path, format!("{before}{start}{want}{end}{after}")).unwrap();
+            return;
+        }
+        assert!(table == want, "{} doesn't list the shortcuts as they are: ARKHA_WRITE_MANUAL=1 cargo test manual_lists writes them", path.display());
+    }
 
     #[test]
     fn user_shortcuts_replace_the_defaults() {
