@@ -291,8 +291,7 @@ impl Sidebar {
         }
         // The trash icon shows whether it's empty.
         if let Ok(tm) = gio::File::for_uri("trash:///").monitor_directory(gio::FileMonitorFlags::NONE, gio::Cancellable::NONE) {
-            let q = queue.clone();
-            tm.connect_changed(move |_, _, _, _| q());
+            tm.connect_changed(move |_, _, _, _| queue());
             *self._trash_monitor.borrow_mut() = Some(tm);
         }
 
@@ -300,7 +299,6 @@ impl Sidebar {
         // track of clicks after a drag. This is for the keyboard (Enter).
         self.list.set_activate_on_single_click(false);
         {
-            let w = w.clone();
             self.list.connect_row_activated(move |_, row| {
                 let mouse = gtk::current_event().is_some_and(|e| {
                     matches!(e.event_type(), gdk::EventType::ButtonPress | gdk::EventType::DoubleButtonPress | gdk::EventType::ButtonRelease)
@@ -422,7 +420,7 @@ impl Sidebar {
                         tooltip: Some(name.clone()),
                         label: name,
                         target: Target::Drive(d.clone()),
-                        drive: Some(d.clone()),
+                        drive: Some(d),
                         ..Item::blank("devices")
                     });
                 }
@@ -1132,7 +1130,7 @@ fn computer_items() -> Vec<Item> {
 fn usual_computer_items() -> Vec<Item> {
     let home = glib::home_dir();
     let mut out = vec![place(gio::File::for_path(&home), &tr("Home"), "user-home-symbolic")];
-    let mut seen = vec![home.clone()];
+    let mut seen = vec![home];
     let mut dir = |path: Option<std::path::PathBuf>, icon: Option<&str>, label: Option<&str>| {
         let Some(path) = path else { return };
         if seen.contains(&path) || !path.is_dir() {
@@ -1783,8 +1781,8 @@ mod tests {
         let values: Vec<char> = "xyz01äß".chars().collect();
         crate::testutil::cases(3000, |r| {
             let text = r.text_of(&chars, 60);
-            let section = r.text_of(&names, 3).to_string() + "s";
-            let key = r.text_of(&names, 3).to_string() + "k";
+            let section = r.text_of(&names, 3) + "s";
+            let key = r.text_of(&names, 3) + "k";
             let value = r.text_of(&values, 5);
             let set = ini_set(&text, &section, &key, &value);
             assert_eq!(ini_get(&set, &section, &key).as_deref(), Some(value.as_str()), "{text:?} → {set:?}");

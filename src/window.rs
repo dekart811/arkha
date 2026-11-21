@@ -1630,7 +1630,6 @@ impl AppWindow {
             }
         });
         {
-            let w = w.clone();
             self.window.connect_is_active_notify(move |_| {
                 if let Some(s) = w.upgrade() {
                     s.update_action_states();
@@ -1857,7 +1856,6 @@ impl AppWindow {
             });
         }
         {
-            let w = w.clone();
             nb.connect_switch_page(move |nb, page, _| {
                 let Some(s) = w.upgrade() else { return };
                 // Tabs opened from now on go after the chosen one.
@@ -1866,7 +1864,6 @@ impl AppWindow {
                     // Switching tabs in the other pane makes it the active one.
                     if s.split_on() {
                         let nb = nb.clone();
-                        let s = s.clone();
                         glib::idle_add_local_once(move || s.set_active(&nb));
                     }
                     return;
@@ -3027,11 +3024,10 @@ impl AppWindow {
             .map(|u| Item { src: u, dest_dir: dest.uri().to_string(), name: None })
             .collect();
         let w = Rc::downgrade(self);
-        let dest2 = dest.clone();
         ops::run(Some(self.window.clone().upcast()), Job::Transfer { kind, items, check }, move |created| {
             if let Some(s) = w.upgrade() {
                 if let Some(p) = s.current_pane() {
-                    if p.current().equal(&dest2) && !created.is_empty() {
+                    if p.current().equal(&dest) && !created.is_empty() {
                         let files: Vec<gio::File> = created.iter().map(|c| gio::File::for_uri(c)).collect();
                         p.add_files_now(&files);
                         p.select_uris(&created);
@@ -3157,7 +3153,7 @@ impl AppWindow {
             .map(|r| Item {
                 src: r.uri.clone(),
                 dest_dir: gio::File::for_path(&r.orig).uri().to_string(),
-                name: Some(r.name.clone()),
+                name: Some(r.name),
             })
             .collect();
         if !items.is_empty() {

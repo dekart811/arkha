@@ -231,7 +231,7 @@ fn show_items(dialog: &gtk::Dialog, files: Vec<gio::File>, chosen: &Rc<std::cell
     }
     // The metadata read in the background; then the pages that show it.
     {
-        let (d, files, img, info, metas) = (dialog.clone(), files.clone(), img.clone(), infos[0].clone(), metas.clone());
+        let (d, files, img, info, metas) = (dialog.clone(), files.clone(), img, infos[0].clone(), metas);
         crate::metadata::read_items(files.iter().map(|f| f.uri().to_string()).collect(), move |found| {
             // Read for items no longer shown (others dropped in meanwhile):
             // their tabs are gone.
@@ -494,7 +494,7 @@ fn permissions_page(dialog: &gtk::Dialog, files: &[gio::File], infos: &[gio::Fil
     update_octal();
     // A check box for one permission bit, flipping it in every file.
     let bit_box = {
-        let (modes, files, update_octal, d) = (modes.clone(), files_rc.clone(), update_octal.clone(), dialog.clone());
+        let (modes, files, update_octal, d) = (modes.clone(), files_rc.clone(), update_octal, dialog.clone());
         move |bit: u32, label: Option<&str>| -> gtk::CheckButton {
             let cb = match label {
                 Some(l) => gtk::CheckButton::with_label(l),
@@ -569,7 +569,7 @@ fn permissions_page(dialog: &gtk::Dialog, files: &[gio::File], infos: &[gio::Fil
         grid.pack_start(&apply, false, false, 0);
         grid.pack_start(&done, true, true, 0);
         pg.attach(&grid, 0, r, 4, 1);
-        let (modes, files, d) = (modes.clone(), files_rc.clone(), dialog.clone());
+        let (modes, files, d) = (modes, files_rc, dialog.clone());
         apply.connect_clicked(move |b| {
             let dirs: Vec<(std::path::PathBuf, u32)> = files
                 .iter()
@@ -646,7 +646,6 @@ fn open_with_page(dialog: &gtk::Dialog, info: &gio::FileInfo, ctype: &str) -> gt
     let set_btn = gtk::Button::with_mnemonic(&tr("_Set as Default"));
     set_btn.set_halign(gtk::Align::End);
     {
-        let w = w.clone();
         let ctype = ctype.to_string();
         let d = dialog.clone();
         set_btn.connect_clicked(move |_| {
@@ -761,7 +760,7 @@ fn checksums_page(file: &gio::File, size: u64) -> gtk::Box {
     all.set_tooltip_text(Some(&tr("Work out every checksum above that has no result yet (all of them again if each has one), reading the file only once")));
     all.set_halign(gtk::Align::End);
     {
-        let (running, buttons, bar, progress_row, rows) = (running.clone(), calc_buttons.clone(), bar.clone(), progress_row.clone(), rows.clone());
+        let (running, buttons, bar, progress_row, rows) = (running, calc_buttons.clone(), bar, progress_row.clone(), rows);
         let uri = file.uri().to_string();
         all.connect_clicked(move |_| {
             let rows = rows.borrow();
@@ -1477,7 +1476,7 @@ fn notes_page(dialog: &gtk::Dialog, file: &gio::File, note: &str) -> gtk::Widget
     buffer.set_text(note);
     let saved = Rc::new(std::cell::RefCell::new(buffer.text(&buffer.start_iter(), &buffer.end_iter(), false).map(|t| t.to_string()).unwrap_or_default()));
     let save = {
-        let (file, buffer, saved, d) = (file.clone(), buffer.clone(), saved.clone(), dialog.clone());
+        let (file, buffer, saved, d) = (file.clone(), buffer.clone(), saved, dialog.clone());
         Rc::new(move || {
             let text = buffer.text(&buffer.start_iter(), &buffer.end_iter(), false).map(|t| t.to_string()).unwrap_or_default();
             if *saved.borrow() == text {

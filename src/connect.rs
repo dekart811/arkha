@@ -176,7 +176,7 @@ pub fn show(parent: &gtk::Window, open: impl Fn(String) + 'static) {
     let read = Rc::new(read);
     // Only the fields the kind of server has; Connect once there's a server.
     let update = {
-        let (d, rows, user_heading, port, read) = (d.clone(), rows.clone(), user_heading.clone(), port.clone(), read.clone());
+        let (d, rows, user_heading, port, read) = (d.clone(), rows, user_heading, port.clone(), read.clone());
         let (share, domain, user) = (share.clone(), domain.clone(), user.clone());
         move || {
             let s = read();

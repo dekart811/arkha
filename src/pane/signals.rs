@@ -136,7 +136,6 @@ impl Pane {
         // panes) is remembered, and the picture reloaded at the new size,
         // once the dragging stops.
         {
-            let w = w.clone();
             let gen = Rc::new(Cell::new(0u64));
             self.info_paned.connect_position_notify(move |pn| {
                 let Some(p) = w.upgrade() else { return };
@@ -272,7 +271,6 @@ impl Pane {
             });
         }
         {
-            let w = w.clone();
             iv.connect_popup_menu(move |_| {
                 if let Some(p) = w.upgrade() {
                     let on_item = !p.selected_paths().is_empty();
@@ -698,7 +696,6 @@ impl Pane {
         // ← / → in the icon views go on to the next row at a row's end (and
         // back to the previous row's end at its start), instead of stopping.
         {
-            let w = w.clone();
             self.icon_view.connect_key_press_event(move |_, ev| match w.upgrade() {
                 Some(p) => {
                     use gdk::keys::constants as k;

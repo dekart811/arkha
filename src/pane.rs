@@ -914,7 +914,7 @@ impl Pane {
             typeahead_gen: Cell::new(0),
             typeahead_wheel: Cell::new(0.0),
             typeahead_entry,
-            overlay: overlay.clone(),
+            overlay,
             rename_editor: RefCell::new(None),
             rename_tries: Cell::new(0),
             info,

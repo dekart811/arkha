@@ -85,7 +85,7 @@ impl Hasher {
     /// In lower-case hex, as sha256sum, b2sum and the like print it.
     fn finish(self) -> String {
         match self {
-            Hasher::Glib(c) => c.string().map(|s| s.to_string()).unwrap_or_default(),
+            Hasher::Glib(c) => c.string().unwrap_or_default(),
             Hasher::Crc32(h) => format!("{:08x}", h.finalize()),
             Hasher::Blake2b(h) => blake2::Digest::finalize(*h).iter().map(|b| format!("{b:02x}")).collect(),
         }

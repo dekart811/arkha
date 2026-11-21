@@ -1480,7 +1480,6 @@ fn checksums_editor() -> gtk::Box {
     let reset = gtk::Button::with_mnemonic(&tr("Reset _Order"));
     reset.set_tooltip_text(Some(&tr("Put every checksum back in its usual place (which are offered stays as it is)")));
     {
-        let ol = ol.clone();
         reset.connect_clicked(move |_| {
             let order: Vec<String> = crate::checksums::ALL.iter().map(|a| a.id().to_string()).collect();
             config::update(|s| s.checksum_order = order.clone());
@@ -1524,7 +1523,6 @@ fn props_tabs_editor() -> gtk::Box {
     let reset = gtk::Button::with_mnemonic(&tr("Reset O_rder"));
     reset.set_tooltip_text(Some(&tr("Put every tab back in its usual place (which are shown stays as it is)")));
     {
-        let ol = ol.clone();
         reset.connect_clicked(move |_| {
             let order: Vec<String> = config::PROPS_TABS.iter().map(|t| t.to_string()).collect();
             config::update(|s| s.props_tab_order = order.clone());
@@ -1586,7 +1584,6 @@ pub(super) fn bookmark_editor(parent: &gtk::Window) -> gtk::Box {
         });
     }
     {
-        let save = save.clone();
         store.connect_row_deleted(move |_, _| save());
     }
     let sw = gtk::ScrolledWindow::new(gtk::Adjustment::NONE, gtk::Adjustment::NONE);
@@ -1595,7 +1592,6 @@ pub(super) fn bookmark_editor(parent: &gtk::Window) -> gtk::Box {
     sw.set_vexpand(true);
     let rm = gtk::Button::with_mnemonic(&tr("_Remove"));
     {
-        let tv = tv.clone();
         let store = store.clone();
         rm.connect_clicked(move |_| {
             if let Some((_, it)) = tv.selection().selected() {
@@ -1608,7 +1604,6 @@ pub(super) fn bookmark_editor(parent: &gtk::Window) -> gtk::Box {
     hint.set_xalign(0.0);
     let add = gtk::Button::with_mnemonic(&tr("_Add…"));
     {
-        let store = store.clone();
         let parent = parent.clone();
         add.connect_clicked(move |_| {
             let fc = gtk::FileChooserDialog::with_buttons(
@@ -1700,7 +1695,7 @@ fn keybindings_editor(parent: &gtk::Window, app: &gtk::Application) -> gtk::Box 
         }
     };
     let after = {
-        let (refill, tv, selected) = (refill.clone(), tv.clone(), selected.clone());
+        let (refill, tv, selected) = (refill, tv.clone(), selected.clone());
         move || {
             let keep = selected();
             refill();
@@ -1760,7 +1755,6 @@ fn keybindings_editor(parent: &gtk::Window, app: &gtk::Application) -> gtk::Box 
         btn_change.connect_clicked(move |_| change());
     }
     {
-        let change = change.clone();
         tv.connect_row_activated(move |_, _, _| change());
     }
     for (btn, clear) in [(&btn_clear, true), (&btn_reset, false)] {
@@ -1773,7 +1767,7 @@ fn keybindings_editor(parent: &gtk::Window, app: &gtk::Application) -> gtk::Box 
         });
     }
     {
-        let (app, after) = (app.clone(), after.clone());
+        let (app, after) = (app.clone(), after);
         btn_reset_all.connect_clicked(move |_| {
             keys::reset_all(&app);
             after();
@@ -1789,7 +1783,6 @@ fn keybindings_editor(parent: &gtk::Window, app: &gtk::Application) -> gtk::Box 
     };
     sync(None);
     {
-        let selected = selected.clone();
         tv.selection().connect_changed(move |_| sync(selected()));
     }
     let buttons = button_row(&[&btn_change, &btn_clear, &btn_reset], &[&btn_reset_all]);
@@ -2001,7 +1994,7 @@ fn list_editor<T: Clone + 'static>(parent: &gtk::Window, items: Vec<T>, spec: Li
     }
     // Buttons that need a selected item.
     let sync = {
-        let (edit, remove, up, down, list) = (edit.clone(), remove.clone(), up.clone(), down.clone(), list.clone());
+        let (edit, remove, up, down, list) = (edit.clone(), remove.clone(), up.clone(), down.clone(), list);
         move |sel: Option<usize>| {
             let n = list.borrow().len();
             edit.set_sensitive(sel.is_some());

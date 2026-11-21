@@ -1115,7 +1115,7 @@ impl Worker {
                         match f.trash(Some(&self.cancel)) {
                             Ok(()) => {
                                 // For Undo: brought back out of the trash.
-                                self.undo.push(Moved { src: u.clone(), dst: String::new(), replaced: false });
+                                self.undo.push(Moved { src: u, dst: String::new(), replaced: false });
                                 self.done_items += 1;
                                 self.progress(&fill(&tr("Trashing “{name}”"), &[("name", &base_name(&f))]), false);
                                 break;
@@ -1127,7 +1127,7 @@ impl Worker {
                             ) {
                                 ErrChoice::Retry => continue,
                                 ErrChoice::DeletePermanently => {
-                                    let _ = self.delete_rec(&f, false, Some(u.clone()));
+                                    let _ = self.delete_rec(&f, false, Some(u));
                                     break;
                                 }
                                 _ => break,
@@ -2083,7 +2083,7 @@ fn perform(parent: Option<gtk::Window>, a: Action, back: bool) -> Result<(), Str
         }
         (_, Action::Rename { items }) => {
             // Back in the opposite order: "a → b, b → c" undone is "c → b, b → a".
-            let steps: Vec<(String, String)> = if back { items.iter().rev().map(|(f, t)| (t.clone(), f.clone())).collect() } else { items.clone() };
+            let steps: Vec<(String, String)> = if back { items.iter().rev().map(|(f, t)| (t.clone(), f.clone())).collect() } else { items };
             for (from, to) in &steps {
                 let (from, to) = (gio::File::for_uri(from), gio::File::for_uri(to));
                 if to.query_exists(gio::Cancellable::NONE) {
@@ -3065,7 +3065,7 @@ mod tests {
         let (a, b, c) = (uri(&s.0.join("a")), uri(&s.0.join("b")), uri(&s.0.join("c")));
         fs::rename(s.0.join("b"), s.0.join("c")).unwrap();
         fs::rename(s.0.join("a"), s.0.join("b")).unwrap();
-        let chain = Action::Rename { items: vec![(b.clone(), c.clone()), (a.clone(), b.clone())] };
+        let chain = Action::Rename { items: vec![(b.clone(), c), (a, b)] };
         perform(None, chain.clone(), true).unwrap();
         assert_eq!((read(&s.0.join("a")), read(&s.0.join("b"))), ("1".to_string(), "2".to_string()));
         perform(None, chain, false).unwrap();
@@ -3128,7 +3128,7 @@ mod tests {
         note_chowns(vec![(other.clone(), (1, 1), (1, 1))]);
         assert_eq!(undo_len(), 2);
         // Only what changed: one item of two.
-        note_modes(vec![(other.clone(), 0o644, 0o600), (named.clone(), 0o644, 0o644)]);
+        note_modes(vec![(other, 0o644, 0o600), (named, 0o644, 0o644)]);
         assert_eq!(UNDO.with(|u| u.borrow().last().map(|a| matches!(a, Action::Mode { items } if items.len() == 1))), Some(true));
         // At most UNDO_STEPS, the oldest forgotten.
         for i in 0..UNDO_STEPS + 5 {
@@ -3652,9 +3652,9 @@ mod tests {
             let (from, to) = if moving {
                 let from = shm.0.join("tree");
                 make_tree(&from, 400, 10 + round as u64);
-                (from, dst.clone())
+                (from, dst)
             } else {
-                (src.clone(), dst.clone())
+                (src.clone(), dst)
             };
             let before = tree_contents(&from);
             let cancel = gio::Cancellable::new();

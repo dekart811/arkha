@@ -86,29 +86,24 @@ fn parse_special(data: &[u8]) -> Option<(bool, Vec<String>)> {
 }
 
 /// Read file URIs from the clipboard. Callback gets (is_cut, uris).
-pub fn get(cb: impl Fn(bool, Vec<String>) + 'static) {
-    let cb = std::rc::Rc::new(cb);
-    let cb2 = cb.clone();
+pub fn get(cb: impl FnOnce(bool, Vec<String>) + 'static) {
     clipboard().request_contents(&gdk::Atom::intern(MATE), move |c, sel| {
         if let Some((cut, uris)) = parse_special(&sel.data()) {
-            cb2(cut, uris);
+            cb(cut, uris);
             return;
         }
-        let cb3 = cb2.clone();
         c.request_contents(&gdk::Atom::intern(GNOME), move |c, sel| {
             if let Some((cut, uris)) = parse_special(&sel.data()) {
-                cb3(cut, uris);
+                cb(cut, uris);
                 return;
             }
-            let cb4 = cb3.clone();
             c.request_contents(&gdk::Atom::intern(URIS), move |c, sel| {
                 let uris: Vec<String> = sel.uris().iter().map(|s| s.to_string()).collect();
                 if !uris.is_empty() {
-                    cb4(false, uris);
+                    cb(false, uris);
                     return;
                 }
                 // Plain text with absolute paths, one per line.
-                let cb5 = cb4.clone();
                 c.request_text(move |_, text| {
                     let uris: Vec<String> = text
                         .unwrap_or_default()
@@ -117,7 +112,7 @@ pub fn get(cb: impl Fn(bool, Vec<String>) + 'static) {
                         .filter(|l| l.starts_with('/') && std::path::Path::new(l).exists())
                         .map(|l| gio::File::for_path(l).uri().to_string())
                         .collect();
-                    cb5(false, uris);
+                    cb(false, uris);
                 });
             });
         });

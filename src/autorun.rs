@@ -553,7 +553,7 @@ mod tests {
     fn lists_say_what_to_do() {
         let none: [Vec<String>; 3] = Default::default();
         assert_eq!(action_in(&none, "x-content/image-dcf"), Action::Ask);
-        let l = with_action(none.clone(), "x-content/image-dcf", Action::StartApp);
+        let l = with_action(none, "x-content/image-dcf", Action::StartApp);
         assert_eq!(action_in(&l, "x-content/image-dcf"), Action::StartApp);
         // One list at a time: a new choice takes it out of the others.
         let l = with_action(l, "x-content/image-dcf", Action::OpenFolder);

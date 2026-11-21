@@ -532,7 +532,7 @@ pub fn show(parent: &gtk::Window, files: Vec<gio::File>) {
 
     // Recompute every new name from the current names and the settings.
     let update = {
-        let (store, entries, ui) = (store.clone(), entries.clone(), ui.clone());
+        let (store, entries, ui) = (store, entries.clone(), ui.clone());
         Rc::new(move || {
             let o = ui.options();
             for (row, e) in entries.borrow().iter().enumerate() {
@@ -574,7 +574,7 @@ pub fn show(parent: &gtk::Window, files: Vec<gio::File>) {
         close.connect_clicked(move |_| d.response(gtk::ResponseType::Close));
     }
     {
-        let (d, entries, ui, update) = (d.clone(), entries.clone(), ui.clone(), update.clone());
+        let (d, entries, ui, update) = (d.clone(), entries, ui, update);
         apply.connect_clicked(move |_| {
             let o = ui.options();
             let plan: Vec<(usize, String)> = entries.borrow().iter().enumerate().map(|(i, e)| (i, new_name_for(&e.old, e.is_dir, i, &o))).collect();
@@ -697,7 +697,7 @@ mod tests {
         assert_eq!(new_name("photo.jpg", 0, &Options { insert_from_end: true, insert_pos: 4, ..ins.clone() }), "photo_x.jpg");
         assert_eq!(new_name("photo.jpg", 0, &Options { insert_before_ext: true, insert_pos: 2, ..ins.clone() }), "ph_xoto.jpg");
         assert_eq!(new_name("photo.jpg", 0, &Options { insert_before_ext: true, insert_pos: 50, ..ins.clone() }), "photo_x.jpg");
-        let both = Options { insert_from_end: true, insert_before_ext: true, ..ins.clone() };
+        let both = Options { insert_from_end: true, insert_before_ext: true, ..ins };
         assert_eq!(new_name("photo.jpg", 0, &both), "photo_x.jpg");
         assert_eq!(new_name("photo.jpg", 0, &Options { insert_pos: 2, ..both.clone() }), "pho_xto.jpg");
         assert_eq!(new_name("ab.jpg", 0, &Options { insert_pos: 9, ..both.clone() }), "_xab.jpg");
@@ -708,7 +708,7 @@ mod tests {
         assert_eq!(new_name("photo.jpg", 0, &Options { number_at_end: true, ..num.clone() }), "photo.jpg01");
         assert_eq!(new_name("photo.jpg", 4, &Options { number_at_end: true, number_before_ext: true, ..num.clone() }), "photo05.jpg");
         assert_eq!(new_name("photo.jpg", 0, &Options { number_before_ext: true, ..num.clone() }), "01photo.jpg");
-        assert_eq!(new_name_for("dir.d", true, 0, &Options { number_at_end: true, number_before_ext: true, ..num.clone() }), "dir.d01");
+        assert_eq!(new_name_for("dir.d", true, 0, &Options { number_at_end: true, number_before_ext: true, ..num }), "dir.d01");
         assert_eq!(new_name("a.tar.gz", 0, &Options { insert_text: "-v2".into(), digits: 2, number_at_end: true, number_before_ext: true, ..both }), "a.tar-v201.gz");
     }
 

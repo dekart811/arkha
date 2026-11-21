@@ -187,7 +187,7 @@ mod tests {
         set_sort("file:///b", &by, !desc);
         set_info_panel("file:///b", true);
         assert_eq!(get("file:///a"), FolderView { view: Some(other_view.into()), ..Default::default() });
-        assert_eq!(get("file:///b"), FolderView { view: None, sort: Some((by.clone(), !desc)), info_panel: Some(true) });
+        assert_eq!(get("file:///b"), FolderView { view: None, sort: Some((by, !desc)), info_panel: Some(true) });
         assert_eq!(get("file:///elsewhere"), FolderView::default());
         assert_eq!(count(), 2);
         // Back to the defaults: the folder goes, from the file too.
