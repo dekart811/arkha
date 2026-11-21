@@ -305,17 +305,28 @@ impl AppWindow {
             tabs.append(Some(id), &name);
         }
         tabs.set_active_id(Some(&s.new_tabs));
-        tabs.set_tooltip_text(Some(
+        tabs.set_tooltip_text(Some(&tr(
             "After the current tab, in order: a folder opened in a new tab goes right after the current tab, and the next \
              ones after it, in the order opened, until you choose another tab; Ctrl+T adds a tab at the end.\n\
              Right after the current tab: each new tab goes right next to it, the newest first.",
-        ));
+        )));
         tabs.connect_changed(|c| {
             if let Some(id) = c.active_id() {
                 config::update(|s| s.new_tabs = id.to_string());
             }
         });
         f.option(&b, &tr("New tabs go:"), tabs.upcast_ref());
+        // Where New Tab opens (not a folder opened in a new tab: that one).
+        let tab_opens = opens_choice(
+            [tr("The same folder as the current tab"), tr("Your home folder"), tr("The folder of the last closed tab"), tr("This folder:")],
+            &s.tab_opens,
+            &s.tab_folder,
+            &tr("Select the folder for new tabs"),
+            |s, v| s.tab_opens = v,
+            |s, v| s.tab_folder = v,
+        );
+        tab_opens.set_tooltip_text(Some(&tr("For New Tab (Ctrl+T); a folder opened in a new tab is shown there as before")));
+        f.option(&b, &tr("New tabs open in:"), tab_opens.upcast_ref());
         f.head(&b, &tr("Split View"));
         let ffm = f.check(&tr("_Focus the pane under the mouse pointer"));
         ffm.set_tooltip_text(Some(&tr("With two panes open (F3), moving the pointer over a pane makes it the active one, without clicking (Shift+F3 switches this)")));
@@ -344,49 +355,16 @@ impl AppWindow {
             }
         });
         f.option(&b, &tr("When closing split view, keep:"), keep.upcast_ref());
-        // Where the extra pane opens: a folder of one's own beside it.
-        let opens = gtk::ComboBoxText::new();
-        for (id, label) in [
-            ("same", tr("The same folder as the pane in use")),
-            ("home", tr("Your home folder")),
-            ("last", tr("The folder it showed when last closed")),
-            ("folder", tr("This folder:")),
-        ] {
-            opens.append(Some(id), &label);
-        }
-        if !opens.set_active_id(Some(&s.split_opens)) {
-            opens.set_active_id(Some("same"));
-        }
-        let folder = gtk::FileChooserButton::new(&tr("Select the folder for the extra pane"), gtk::FileChooserAction::SelectFolder);
-        folder.set_local_only(false);
-        let start = if s.split_folder.is_empty() { util::home_file().uri().to_string() } else { s.split_folder.clone() };
-        let _ = folder.set_current_folder_uri(&start);
-        folder.set_sensitive(s.split_opens == "folder");
-        folder.connect_current_folder_changed(|c| {
-            if let Some(uri) = c.uri().or_else(|| c.current_folder_uri()) {
-                config::update(|s| s.split_folder = uri.to_string());
-            }
-        });
-        {
-            let folder = folder.clone();
-            opens.connect_changed(move |c| {
-                let Some(id) = c.active_id() else { return };
-                let id = id.to_string();
-                folder.set_sensitive(id == "folder");
-                // The folder shown in the button, if none was picked yet.
-                let shown = folder.uri().or_else(|| folder.current_folder_uri()).map(|u| u.to_string());
-                config::update(|s| {
-                    if id == "folder" && s.split_folder.is_empty() {
-                        s.split_folder = shown.unwrap_or_default();
-                    }
-                    s.split_opens = id;
-                });
-            });
-        }
-        let row = gtk::Box::new(gtk::Orientation::Horizontal, 6);
-        row.add(&opens);
-        row.add(&folder);
-        f.option(&b, &tr("The extra pane opens in:"), row.upcast_ref());
+        // Where the extra pane opens.
+        let pane_opens = opens_choice(
+            [tr("The same folder as the pane in use"), tr("Your home folder"), tr("The folder it showed when last closed"), tr("This folder:")],
+            &s.split_opens,
+            &s.split_folder,
+            &tr("Select the folder for the extra pane"),
+            |s, v| s.split_opens = v,
+            |s, v| s.split_folder = v,
+        );
+        f.option(&b, &tr("The extra pane opens in:"), pane_opens.upcast_ref());
         f.head(&b, &tr("File Operations"));
         let own = setting_check(
             &tr("Show file operations in their own _window"),
@@ -1033,6 +1011,69 @@ fn edit_dialog(parent: &gtk::Window, title: &str) -> (gtk::Dialog, gtk::Grid) {
 }
 
 /// A dimmed explanation under a setting, wrapped.
+/// A choice of where something new opens (New Tab, split view's extra
+/// pane): `labels` for "same", "home", "last" and "folder", the last one
+/// with a folder button beside it, active only for it. `opens` and
+/// `folder` are the settings now; `set_opens` and `set_folder` store them.
+fn opens_choice(
+    labels: [String; 4],
+    opens: &str,
+    folder: &str,
+    title: &str,
+    set_opens: fn(&mut config::Settings, String),
+    set_folder: fn(&mut config::Settings, String),
+) -> gtk::Box {
+    let combo = gtk::ComboBoxText::new();
+    for (id, label) in ["same", "home", "last", "folder"].into_iter().zip(labels) {
+        combo.append(Some(id), &label);
+    }
+    if !combo.set_active_id(Some(opens)) {
+        combo.set_active_id(Some("same"));
+    }
+    let chooser = gtk::FileChooserButton::new(title, gtk::FileChooserAction::SelectFolder);
+    chooser.set_local_only(false);
+    let start = if folder.is_empty() { util::home_file().uri().to_string() } else { folder.to_string() };
+    let _ = chooser.set_current_folder_uri(&start);
+    // "This folder:" with none stored yet (a settings file edited by hand):
+    // the one the button shows, home, as it's what it says.
+    if opens == "folder" && folder.is_empty() {
+        config::update(|s| set_folder(s, start.clone()));
+    }
+    chooser.set_sensitive(opens == "folder");
+    // Stored as the button shows it: a folder from its list (Home, File
+    // System, …) only says selection-changed, one from its dialog file-set
+    // too (current-folder-changed comes for neither); selection-changed
+    // also comes once it's set up, so a folder shown is never one unstored.
+    let store = move |c: &gtk::FileChooserButton| {
+        if let Some(uri) = c.uri().or_else(|| c.current_folder_uri()) {
+            config::update(|s| set_folder(s, uri.to_string()));
+        }
+    };
+    chooser.connect_selection_changed(store);
+    chooser.connect_file_set(store);
+    {
+        let chooser = chooser.clone();
+        let picked = !folder.is_empty();
+        combo.connect_changed(move |c| {
+            let Some(id) = c.active_id() else { return };
+            let id = id.to_string();
+            chooser.set_sensitive(id == "folder");
+            // The folder shown in the button, if none was picked yet.
+            let shown = chooser.uri().or_else(|| chooser.current_folder_uri()).map(|u| u.to_string());
+            config::update(|s| {
+                if id == "folder" && !picked {
+                    set_folder(s, shown.clone().unwrap_or_default());
+                }
+                set_opens(s, id.clone());
+            });
+        });
+    }
+    let row = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+    row.add(&combo);
+    row.add(&chooser);
+    row
+}
+
 fn hint_label(text: &str) -> gtk::Label {
     let l = gtk::Label::new(Some(text));
     l.set_xalign(0.0);

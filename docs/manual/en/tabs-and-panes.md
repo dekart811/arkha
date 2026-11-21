@@ -18,6 +18,8 @@ Drag a tab into another Arkha window to move it there, or out of the window to g
 
 Where new tabs go (after the current one in the order you opened them, right after it, or at the end), and whether the tab bar shows with only one tab, is set in **Preferences → Behavior → Tabs** and **Preferences → Display**.
 
+**New Tab** opens in the same folder as the current tab. In **Preferences → Behavior → Tabs** you can have it open your home folder, the folder of the last closed tab, or a folder of your choice instead. A folder you open in a new tab (middle-click, **Open in New Tab**) is always shown there.
+
 **File → Close All Windows** closes every Arkha window at once.
 
 ## Split view

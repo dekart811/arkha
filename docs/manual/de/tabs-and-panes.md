@@ -18,6 +18,8 @@ Ziehen Sie einen Reiter in ein anderes Arkha-Fenster, um ihn dorthin zu verschie
 
 Wohin neue Reiter kommen (nach dem aktuellen in der Reihenfolge, in der Sie sie geöffnet haben, direkt nach ihm oder ans Ende) und ob die Reiterleiste auch bei nur einem Reiter erscheint, stellen Sie unter **Einstellungen → Verhalten → Reiter** und **Einstellungen → Anzeige** ein.
 
+**Neuer Reiter** öffnet sich im selben Ordner wie der aktuelle Reiter. Unter **Einstellungen → Verhalten → Reiter** können Sie ihn stattdessen in Ihrem persönlichen Ordner öffnen lassen, im Ordner des zuletzt geschlossenen Reiters oder in einem Ordner Ihrer Wahl. Ein Ordner, den Sie in einem neuen Reiter öffnen (Mittelklick, **In neuem Reiter öffnen**), wird immer dort gezeigt.
+
 **Datei → Alle Fenster schließen** schließt alle Arkha-Fenster auf einmal.
 
 ## Geteilte Ansicht

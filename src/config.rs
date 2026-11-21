@@ -65,6 +65,12 @@ pub struct Settings {
     pub split_folder: String,
     /// The folder (a URI) the pane that closed with split view last showed.
     pub split_last: String,
+    /// Where New Tab opens, as split_opens: "same" (the current tab's
+    /// folder), "home", "last" (`tab_last`) or "folder" (`tab_folder`).
+    pub tab_opens: String,
+    pub tab_folder: String,
+    /// The folder (a URI) of the tab closed last.
+    pub tab_last: String,
     /// New tabs go at the end of the tab bar (else right after the current one).
     /// Where new tabs go: "in-order" (as Firefox puts them), "after" (right
     /// after the current tab) or "end".
@@ -292,6 +298,9 @@ impl Default for Settings {
             split_opens: "same".into(),
             split_folder: String::new(),
             split_last: String::new(),
+            tab_opens: "same".into(),
+            tab_folder: String::new(),
+            tab_last: String::new(),
             new_tabs: "in-order".into(),
             show_zoom_buttons: true,
             show_view_buttons: true,
@@ -454,6 +463,9 @@ fn from_keyfile(kf: &glib::KeyFile) -> Settings {
     st!(split_opens);
     st!(split_folder);
     st!(split_last);
+    st!(tab_opens);
+    st!(tab_folder);
+    st!(tab_last);
     st!(new_tabs);
     b!(show_zoom_buttons);
     b!(show_view_buttons);
@@ -688,6 +700,9 @@ fn to_keyfile(s: &Settings) -> glib::KeyFile {
     kf.set_string(g, "split_opens", &s.split_opens);
     kf.set_string(g, "split_folder", &s.split_folder);
     kf.set_string(g, "split_last", &s.split_last);
+    kf.set_string(g, "tab_opens", &s.tab_opens);
+    kf.set_string(g, "tab_folder", &s.tab_folder);
+    kf.set_string(g, "tab_last", &s.tab_last);
     kf.set_string(g, "new_tabs", &s.new_tabs);
     kf.set_boolean(g, "show_zoom_buttons", s.show_zoom_buttons);
     kf.set_boolean(g, "show_view_buttons", s.show_view_buttons);

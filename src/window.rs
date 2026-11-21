@@ -385,11 +385,12 @@ pub struct AppWindow {
     _bookmark_monitor: RefCell<Option<gio::FileMonitor>>,
 }
 
-/// Where the extra pane of split view opens, by Preferences (`opens`, see
-/// Settings::split_opens): the folder of the pane in use (`here`), home,
-/// where the closed pane was (`last`) or the chosen `folder`; `here` when
-/// those aren't set, or a local one is gone.
-fn split_opens_at(opens: &str, here: &gio::File, folder: &str, last: &str) -> gio::File {
+/// Where a new tab (New Tab) or the extra pane of split view opens, by
+/// Preferences (`opens`, see Settings::tab_opens and split_opens): the
+/// folder of the tab or pane in use (`here`), home, where the one closed
+/// last was (`last`) or the chosen `folder`; `here` when those aren't set,
+/// or a local one is gone.
+fn opens_at(opens: &str, here: &gio::File, folder: &str, last: &str) -> gio::File {
     let usable = |uri: &str| {
         let f = gio::File::for_uri(uri);
         (!uri.is_empty() && (!f.is_native() || f.query_exists(gio::Cancellable::NONE))).then_some(f)
@@ -912,8 +913,9 @@ impl AppWindow {
     fn setup_actions(self: &Rc<Self>) {
         let s = config::get();
         self.add("new-tab", |w| {
-            let f = w.current_pane().map(|p| p.current()).unwrap_or_else(util::home_file);
-            w.add_tab(&f, true);
+            let here = w.current_pane().map(|p| p.current()).unwrap_or_else(util::home_file);
+            let (opens, folder, last) = config::with(|s| (s.tab_opens.clone(), s.tab_folder.clone(), s.tab_last.clone()));
+            w.add_tab(&opens_at(&opens, &here, &folder, &last), true);
         });
         self.add("new-window", |w| {
             let f = w.current_pane().map(|p| p.current()).unwrap_or_else(util::home_file);
@@ -1903,7 +1905,7 @@ impl AppWindow {
             if on {
                 let here = self.current_pane().map(|p| p.current()).unwrap_or_else(util::home_file);
                 let (opens, folder, last) = config::with(|s| (s.split_opens.clone(), s.split_folder.clone(), s.split_last.clone()));
-                let loc = split_opens_at(&opens, &here, &folder, &last);
+                let loc = opens_at(&opens, &here, &folder, &last);
                 self.notebook2.show();
                 let width = self.split.allocated_width();
                 if width > 0 {
@@ -2109,6 +2111,9 @@ impl AppWindow {
         let nb = notebook_of(pane.root.upcast_ref()).unwrap_or_else(|| self.notebook.clone());
         if let Some(n) = nb.page_num(&pane.root) {
             let (back, fwd) = pane.history();
+            // For New Tab's "the folder of the last closed tab".
+            let uri = pane.current().uri().to_string();
+            config::update(|s| s.tab_last = uri);
             let mut closed = self.closed_tabs.borrow_mut();
             closed.push(ClosedTab { place: pane.place(), back, fwd, position: n });
             if closed.len() > MAX_CLOSED_TABS {
@@ -3578,7 +3583,7 @@ mod tests {
         std::fs::create_dir_all(&there).unwrap();
         let there_uri = gio::File::for_path(&there).uri().to_string();
         let gone = gio::File::for_path(t.0.join("gone")).uri().to_string();
-        let at = |opens: &str, folder: &str, last: &str| split_opens_at(opens, &here, folder, last).uri().to_string();
+        let at = |opens: &str, folder: &str, last: &str| opens_at(opens, &here, folder, last).uri().to_string();
         assert_eq!(at("same", &there_uri, &there_uri), here.uri());
         assert_eq!(at("home", "", ""), util::home_file().uri());
         assert_eq!(at("last", "", &there_uri), there_uri);
