@@ -74,7 +74,7 @@ Im Kontextmenü der freien Fläche eines Ordners:
 
 ## Archive
 
-**Hier entpacken** entpackt ein ausgewähltes Archiv (`.zip`, `.tar.gz`, `.7z` …) in den Ordner, in dem es liegt, und **Komprimieren …** packt die ausgewählten Objekte in eines. Beides braucht Engrampa oder File Roller.
+**Hier entpacken** entpackt ein ausgewähltes Archiv (`.zip`, `.tar.gz`, `.7z` …) in den Ordner, in dem es liegt, und **Komprimieren …** packt die ausgewählten Objekte in eines. Beides braucht eine Archivverwaltung: Engrampa, File Roller, Xarchiver oder Ark von KDE. Sind mehrere installiert, wählen Sie unter **Einstellungen → Verhalten → Archivverwaltung**, welche; **Automatisch** nimmt die, die als Anwendung für Archive eingestellt ist.
 
 ## Änderungen von anderswo
 

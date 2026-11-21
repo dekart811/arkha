@@ -72,7 +72,7 @@ Maintainer: ${DEB_MAINTAINER:-dekart811 <mail@dekart811.net>}
 Installed-Size: $(du -sk --exclude=DEBIAN "$stage" | cut -f1)
 Depends: ${depends}
 Recommends: gvfs, bubblewrap
-Suggests: gvfs-backends, ffmpegthumbnailer | ffmpeg, mediainfo, engrampa | file-roller | xarchiver
+Suggests: gvfs-backends, ffmpegthumbnailer | ffmpeg, mediainfo, engrampa | file-roller | xarchiver | ark
 Section: utils
 Priority: optional
 Description: fast graphical file manager

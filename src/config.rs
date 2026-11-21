@@ -45,6 +45,10 @@ pub struct Settings {
     pub toolbar_text: bool,
     /// Shell that runs custom context menu actions, as `<shell> -c <command>`.
     pub action_shell: String,
+    /// The archive manager for Extract Here and Compress (its command, see
+    /// util::ARCHIVERS), or "" for the one set for archives (see
+    /// util::archiver_command).
+    pub archiver: String,
     /// In split view, the pane under the mouse pointer gets focus.
     pub focus_follows_mouse: bool,
     /// How long (ms) the pointer has to stay over a pane before it takes the
@@ -270,6 +274,7 @@ impl Default for Settings {
             always_show_tabs: false,
             toolbar_text: false,
             action_shell: "sh".into(),
+            archiver: String::new(),
             focus_follows_mouse: false,
             focus_follows_mouse_delay: 300,
             new_tabs: "in-order".into(),
@@ -427,6 +432,7 @@ fn from_keyfile(kf: &glib::KeyFile) -> Settings {
     b!(always_show_tabs);
     b!(toolbar_text);
     st!(action_shell);
+    st!(archiver);
     b!(focus_follows_mouse);
     i!(focus_follows_mouse_delay);
     st!(new_tabs);
@@ -656,6 +662,7 @@ fn to_keyfile(s: &Settings) -> glib::KeyFile {
     kf.set_boolean(g, "always_show_tabs", s.always_show_tabs);
     kf.set_boolean(g, "toolbar_text", s.toolbar_text);
     kf.set_string(g, "action_shell", &s.action_shell);
+    kf.set_string(g, "archiver", &s.archiver);
     kf.set_boolean(g, "focus_follows_mouse", s.focus_follows_mouse);
     kf.set_integer(g, "focus_follows_mouse_delay", s.focus_follows_mouse_delay);
     kf.set_string(g, "new_tabs", &s.new_tabs);

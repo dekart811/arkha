@@ -28,6 +28,7 @@ pkgbase = arkha
 	optdepends = engrampa: creating and extracting archives
 	optdepends = file-roller: creating and extracting archives
 	optdepends = xarchiver: creating and extracting archives
+	optdepends = ark: creating and extracting archives
 	optdepends = xterm: Open in Terminal, if no other terminal is installed
 	options = !debug
 	source = arkha-1.2.0.tar.gz::https://github.com/dekart811/arkha/archive/refs/tags/v1.2.0.tar.gz

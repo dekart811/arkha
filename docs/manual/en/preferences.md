@@ -17,6 +17,7 @@
 - **File Operations:** show copies and moves in a window of their own, instead of the button in the location bar.
 - **Trash:** ask before moving files to the trash.
 - **Search:** whether a new search also looks in the subfolders (see [Searching and selecting](search.md#only-this-folder)).
+- **Archives:** which archive manager Extract Here and Compress use, when several are installed.
 - **Other Programs:** let programs that "show a file in its folder" start Arkha when it isn't running.
 - **Scrolling:** a middle-click on empty space autoscrolls.
 

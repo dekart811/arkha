@@ -3246,15 +3246,7 @@ impl AppWindow {
         if paths.is_empty() {
             return;
         }
-        let mut argv: Vec<std::ffi::OsString> = vec![tool.clone().into()];
-        if extract {
-            argv.push("--extract-here".into());
-        } else if tool.ends_with("xarchiver") {
-            argv.push("--compress".into());
-        } else {
-            argv.push("--add".into());
-        }
-        argv.extend(paths);
+        let argv = util::archive_argv(&tool, extract, paths);
         if let Err(e) = util::spawn_in_dir(&argv, p.current().path().as_deref()) {
             util::error_dialog(Some(self.window.upcast_ref()), &tr("Could not start the archive manager"), &e);
         }

@@ -17,6 +17,7 @@
 - **Dateivorgänge:** Kopien und Verschiebungen in einem eigenen Fenster zeigen statt mit dem Knopf in der Ortsleiste.
 - **Papierkorb:** vor dem Verschieben in den Papierkorb nachfragen.
 - **Suche:** ob eine neue Suche auch in den Unterordnern sucht (siehe [Suchen und Auswählen](search.md#nur-diesen-ordner)).
+- **Archive:** welche Archivverwaltung Hier entpacken und Komprimieren verwenden, wenn mehrere installiert sind.
 - **Andere Programme:** Programme, die „eine Datei in ihrem Ordner zeigen“, Arkha starten lassen, wenn es nicht läuft.
 - **Rollen:** ein Mittelklick auf eine freie Fläche rollt automatisch.
 

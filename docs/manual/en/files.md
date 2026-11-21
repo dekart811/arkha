@@ -74,7 +74,7 @@ In the context menu of a folder's empty space:
 
 ## Archives
 
-**Extract Here** unpacks a selected archive (`.zip`, `.tar.gz`, `.7z` …) into the folder it's in, and **Compress…** packs the selected items into one. Both need Engrampa or File Roller.
+**Extract Here** unpacks a selected archive (`.zip`, `.tar.gz`, `.7z` …) into the folder it's in, and **Compress…** packs the selected items into one. Both need an archive manager: Engrampa, File Roller, Xarchiver or KDE's Ark. With several installed, choose which in **Preferences → Behavior → Archive manager**; **Automatic** takes the one set as the application for archives.
 
 ## Changes made elsewhere
 

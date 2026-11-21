@@ -14,7 +14,7 @@ Thumbnails are kept in `~/.cache/thumbnails`, shared with Caja and other program
 | Problem | Why, and what helps |
 |---|---|
 | No Trash, no drives, no network places | They need GVfs (the `gvfs` package; `gvfs-smb`, `gvfs-mtp` and the like for Windows shares and phones). Most desktops have it already. |
-| Extract Here and Compress… are missing | They need an archive manager: Engrampa, File Roller or Xarchiver. |
+| Extract Here and Compress… are missing | They need an archive manager: Engrampa, File Roller, Xarchiver or KDE's Ark. |
 | "No terminal found" | Arkha looks for mate-terminal, xfce4-terminal, gnome-terminal, konsole, alacritty, kitty, xterm and others. Install one, or set the `TERMINAL` environment variable to yours. |
 | "The manual isn't installed" | The package was built without it. With an AUR helper, this happens when its copy of the AUR repo is out of date: delete it (for yay `~/.cache/yay/arkha-git`, for paru `~/.cache/paru/clone/arkha-git`) and install again. Meanwhile, **Read It Online** in that message opens this version's manual on GitHub. |
 | No Media Info tab | It needs the `mediainfo` program, and is only shown for the kinds of files ticked in **Preferences → Previews → Media Info**. |

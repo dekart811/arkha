@@ -29,6 +29,7 @@ pkgbase = arkha-git
 	optdepends = engrampa: creating and extracting archives
 	optdepends = file-roller: creating and extracting archives
 	optdepends = xarchiver: creating and extracting archives
+	optdepends = ark: creating and extracting archives
 	optdepends = xterm: Open in Terminal, if no other terminal is installed
 	provides = arkha
 	conflicts = arkha

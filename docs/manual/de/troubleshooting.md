@@ -14,7 +14,7 @@ Vorschaubilder werden in `~/.cache/thumbnails` aufbewahrt, geteilt mit Caja und 
 | Problem | Warum, und was hilft |
 |---|---|
 | Kein Papierkorb, keine Laufwerke, keine Netzwerkorte | Sie brauchen GVfs (das Paket `gvfs`; `gvfs-smb`, `gvfs-mtp` und Ähnliche für Windows-Freigaben und Telefone). Die meisten Arbeitsumgebungen haben es schon. |
-| Hier entpacken und Komprimieren … fehlen | Sie brauchen eine Archivverwaltung: Engrampa, File Roller oder Xarchiver. |
+| Hier entpacken und Komprimieren … fehlen | Sie brauchen eine Archivverwaltung: Engrampa, File Roller, Xarchiver oder Ark von KDE. |
 | „Kein Terminal gefunden“ | Arkha sucht nach mate-terminal, xfce4-terminal, gnome-terminal, konsole, alacritty, kitty, xterm und anderen. Installieren Sie eines oder setzen Sie die Umgebungsvariable `TERMINAL` auf Ihres. |
 | „Das Handbuch ist nicht installiert“ | Das Paket wurde ohne es gebaut. Mit einem AUR-Helfer passiert das, wenn seine Kopie des AUR-Repositorys veraltet ist: Löschen Sie sie (bei yay `~/.cache/yay/arkha-git`, bei paru `~/.cache/paru/clone/arkha-git`) und installieren Sie erneut. Bis dahin öffnet **Online lesen** in dieser Meldung das Handbuch dieser Version auf GitHub. |
 | Kein Reiter Medieninfo | Er braucht das Programm `mediainfo` und erscheint nur für die Arten von Dateien, die unter **Einstellungen → Vorschau → Medieninfo** angehakt sind. |

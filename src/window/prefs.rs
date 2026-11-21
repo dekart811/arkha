@@ -352,6 +352,36 @@ impl AppWindow {
             |_| {},
         );
         f.indent(&b, sub.upcast_ref());
+        f.head(&b, &tr("Archives"));
+        // The installed ones (and the one chosen, if it's gone since).
+        let archivers = gtk::ComboBoxText::new();
+        archivers.append(Some(""), &tr("Automatic"));
+        let mut any = false;
+        for cmd in util::ARCHIVERS {
+            let installed = glib::find_program_in_path(cmd).is_some();
+            any |= installed;
+            let name = util::archiver_name(cmd);
+            if installed {
+                archivers.append(Some(cmd), name);
+            } else if s.archiver == cmd {
+                archivers.append(Some(cmd), &fill(&tr("{name} (not installed)"), &[("name", &name)]));
+            }
+        }
+        if !archivers.set_active_id(Some(&s.archiver)) {
+            archivers.set_active_id(Some(""));
+        }
+        archivers.connect_changed(|c| {
+            if let Some(id) = c.active_id() {
+                config::update(|s| s.archiver = id.to_string());
+            }
+        });
+        f.option(&b, &tr("Archive manager:"), archivers.upcast_ref());
+        let hint = if any {
+            tr("For Extract Here and Compress. Automatic: the one set as the application for archives, else the first one installed.")
+        } else {
+            tr("For Extract Here and Compress, none is installed: Engrampa, File Roller, Xarchiver or Ark.")
+        };
+        f.indent(&b, hint_label(&hint).upcast_ref());
         f.head(&b, &tr("Other Programs"));
         let fm1 = f.check(&tr("Open folders when other programs _ask, also when Arkha isn't running"));
         fm1.set_tooltip_text(Some(&tr("“Show in folder” in web browsers, download lists and the like opens Arkha, with the file selected. While Arkha runs it does this anyway, unless another file manager that does it was there first; this lets programs start Arkha for it too.")));

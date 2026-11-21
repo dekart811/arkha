@@ -584,8 +584,62 @@ pub fn terminal_command() -> Option<String> {
     ])
 }
 
+/// The archive manager for Extract Here and Compress: the one chosen in
+/// Preferences, if it's installed; else ("Automatic") the one set as the
+/// application for archives (zip), if it's one of these, else the first
+/// installed, KDE's Ark first on KDE.
 pub fn archiver_command() -> Option<String> {
-    find_program(&["engrampa", "file-roller", "xarchiver"])
+    let chosen = crate::config::with(|s| s.archiver.clone());
+    if ARCHIVERS.contains(&chosen.as_str()) && glib::find_program_in_path(&chosen).is_some() {
+        return Some(chosen);
+    }
+    let default = gio::AppInfo::default_for_type("application/zip", false)
+        .map(|a| a.executable())
+        .and_then(|e| e.file_name().map(|n| n.to_string_lossy().into_owned()));
+    let desktop = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
+    choose_archiver(default.as_deref(), &desktop, |p| glib::find_program_in_path(p).is_some()).map(str::to_string)
+}
+
+/// The archive managers Arkha can use, by command.
+pub const ARCHIVERS: [&str; 4] = ["engrampa", "file-roller", "xarchiver", "ark"];
+
+/// An archive manager's name, for Preferences.
+pub fn archiver_name(command: &str) -> &str {
+    match command {
+        "engrampa" => "Engrampa",
+        "file-roller" => "File Roller",
+        "xarchiver" => "Xarchiver",
+        "ark" => "Ark",
+        other => other,
+    }
+}
+
+fn choose_archiver(default: Option<&str>, desktop: &str, installed: impl Fn(&str) -> bool) -> Option<&'static str> {
+    if let Some(d) = default.and_then(|d| ARCHIVERS.iter().find(|a| **a == d)) {
+        if installed(d) {
+            return Some(d);
+        }
+    }
+    let kde = desktop.split(':').any(|d| d == "KDE");
+    let order = if kde { ["ark", "engrampa", "file-roller", "xarchiver"] } else { ARCHIVERS };
+    order.into_iter().find(|a| installed(a))
+}
+
+/// The command line for Extract Here (`extract`) or Compress with `tool`
+/// (as archiver_command found it) on `paths`.
+pub fn archive_argv(tool: &str, extract: bool, paths: Vec<std::ffi::OsString>) -> Vec<std::ffi::OsString> {
+    let flags: &[&str] = match (tool, extract) {
+        // Next to the archive, in a folder of its name unless it holds just
+        // one file or folder, as the others' --extract-here.
+        ("ark", true) => &["--batch", "--autodestination", "--autosubfolder"],
+        // Asks for the archive's name and type in Ark's dialog (without
+        // --dialog, --add wants a name or --autofilename).
+        ("ark", false) => &["--changetofirstpath", "--add", "--dialog"],
+        (_, true) => &["--extract-here"],
+        ("xarchiver", false) => &["--compress"],
+        (_, false) => &["--add"],
+    };
+    std::iter::once(tool.into()).chain(flags.iter().map(|f| f.into())).chain(paths).collect()
 }
 
 pub fn is_archive(ctype: &str) -> bool {
@@ -1026,6 +1080,31 @@ pub fn preview_on(mode: &str, file: &gio::File) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn archiver_set_for_archives_else_the_first_installed() {
+        let all = |_: &str| true;
+        assert_eq!(choose_archiver(Some("ark"), "MATE", all), Some("ark"), "the one set for archives");
+        assert_eq!(choose_archiver(Some("file-roller"), "KDE", all), Some("file-roller"));
+        assert_eq!(choose_archiver(None, "MATE", all), Some("engrampa"), "else the first");
+        assert_eq!(choose_archiver(Some("peazip"), "KDE", all), Some("ark"), "on KDE Ark first");
+        assert_eq!(choose_archiver(None, "ubuntu:KDE", all), Some("ark"));
+        assert_eq!(choose_archiver(Some("ark"), "X-Cinnamon", |p| p != "ark"), Some("engrampa"), "the one set, but not installed");
+        assert_eq!(choose_archiver(None, "GNOME", |p| p == "xarchiver"), Some("xarchiver"));
+        assert_eq!(choose_archiver(None, "GNOME", |_| false), None);
+    }
+
+    #[test]
+    fn archive_command_lines() {
+        let words = |tool: &str, extract: bool| -> Vec<String> {
+            archive_argv(tool, extract, vec!["/a/b.zip".into()]).into_iter().map(|w| w.to_string_lossy().into_owned()).collect()
+        };
+        assert_eq!(words("ark", true), ["ark", "--batch", "--autodestination", "--autosubfolder", "/a/b.zip"]);
+        assert_eq!(words("ark", false), ["ark", "--changetofirstpath", "--add", "--dialog", "/a/b.zip"]);
+        assert_eq!(words("engrampa", true), ["engrampa", "--extract-here", "/a/b.zip"]);
+        assert_eq!(words("xarchiver", false), ["xarchiver", "--compress", "/a/b.zip"]);
+        assert_eq!(words("file-roller", false), ["file-roller", "--add", "/a/b.zip"]);
+    }
 
     #[test]
     fn tab_order_kept_for_tabs_not_shown() {
