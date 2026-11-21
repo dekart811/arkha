@@ -14,11 +14,8 @@ gt_arkha "$HOME"
 hidden() { sed -n 's/^hidden_props_tabs=//p' "$XDG_CONFIG_HOME/arkha/arkha.conf"; }
 tabs() { gt_a11y dialog-tabs | tr '\n' ' '; }
 prefs() {
-  gdbus call --session --dest $APP_ID --object-path $APP_PATH/window/1 \
-    --method org.gtk.Actions.Activate preferences [] {} >/dev/null & sleep 2
   # Properties: the tenth page.
-  local y=180; [ "$BACKEND" = wayland ] && y=194
-  gt_click 240 $((y + 9 * 39))
+  gt_prefs 9
 }
 props() {
   gt_click 900 650; gt_type a.t; gt_key Escape

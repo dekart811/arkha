@@ -15,7 +15,7 @@ gt_key ctrl+a; gt_key ctrl+c; gt_key ctrl+v; sleep 1
 gt_check "copied" "$(state)" "src: ./a (copy).txt ./a.txt ./sub ./sub (copy) ./sub (copy)/c ./sub/c | dest: | trash: "
 gt_key ctrl+z; sleep 1
 gt_check "the copy undone: the copies in the trash" "$(state)" "src: ./a.txt ./sub ./sub/c | dest: | trash: a (copy).txt sub (copy) "
-gt_key ctrl+a; gt_key ctrl+x; gt_key ctrl+l; gt_type "$T/dest"; gt_key Return; gt_key ctrl+v; sleep 1
+gt_key ctrl+a; gt_key ctrl+x; gt_go "$T/dest" 0; gt_key ctrl+v; sleep 1
 gt_check "moved" "$(state)" "src: | dest: ./a.txt ./sub ./sub/c | trash: a (copy).txt sub (copy) "
 gt_key ctrl+l; gt_key ctrl+z
 gt_check "Ctrl+Z in the location bar undoes nothing" "$(state)" "src: | dest: ./a.txt ./sub ./sub/c | trash: a (copy).txt sub (copy) "

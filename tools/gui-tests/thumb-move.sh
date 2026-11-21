@@ -14,7 +14,6 @@ ffmpeg -loglevel error -f lavfi -i testsrc=duration=2:size=320x240:rate=15 "$HOM
 cp "$HOME/a/clip.mp4" "$HOME/a/other.mp4"
 uri() { python3 -c 'import pathlib,sys; print(pathlib.Path(sys.argv[1]).as_uri())' "$1"; }
 md5() { printf %s "$(uri "$1")" | md5sum | cut -d' ' -f1; }
-thumbs() { find "$HOME/.cache/thumbnails" -name '*.png' -not -path '*/fail/*' 2>/dev/null | wc -l; }
 # The thumbnail kept for the file at $1 (its name from the file's URI),
 # and the URI written in it.
 thumb_of() {
@@ -34,24 +33,24 @@ made() { grep -c 'thumbnail: running' "$OUT/arkha.log"; }
 export G_MESSAGES_DEBUG=arkha
 gt_display
 gt_arkha "$HOME/a"; sleep 3; gt_quiet
-gt_check "both videos get a thumbnail" "$(thumbs) $(made)" "2 2"
+gt_check "both videos get a thumbnail" "$(gt_thumbs) $(made)" "2 2"
 # Moved to b.
 gt_click 600 400; gt_type clip; gt_key Escape; gt_key ctrl+x
-gt_key ctrl+l; gt_type "$HOME/b"; gt_key Return; sleep 0.5; gt_key ctrl+v; sleep 3; gt_quiet
+gt_go "$HOME/b" 0.5; gt_key ctrl+v; sleep 3; gt_quiet
 gt_shot moved
-gt_check "moved: its thumbnail kept under its new URI, none made" "$(thumb_of "$HOME/b/clip.mp4") $(thumbs) $(made)" "$(uri "$HOME/b/clip.mp4") 2 2"
+gt_check "moved: its thumbnail kept under its new URI, none made" "$(thumb_of "$HOME/b/clip.mp4") $(gt_thumbs) $(made)" "$(uri "$HOME/b/clip.mp4") 2 2"
 # Renamed there.
 gt_key F2; gt_key ctrl+a; gt_type renamed.mp4; gt_key Return; sleep 3; gt_quiet
-gt_check "renamed: its thumbnail renamed, none made" "$(thumb_of "$HOME/b/renamed.mp4") $(thumbs) $(made)" "$(uri "$HOME/b/renamed.mp4") 2 2"
+gt_check "renamed: its thumbnail renamed, none made" "$(thumb_of "$HOME/b/renamed.mp4") $(gt_thumbs) $(made)" "$(uri "$HOME/b/renamed.mp4") 2 2"
 # Deleted permanently (Enter confirms).
 gt_key shift+Delete; sleep 0.5; gt_key Return; sleep 2
-gt_check "deleted: its thumbnail gone" "$([ -e "$HOME/b/renamed.mp4" ] && echo there || echo deleted) $(thumbs)" "deleted 1"
+gt_check "deleted: its thumbnail gone" "$([ -e "$HOME/b/renamed.mp4" ] && echo there || echo deleted) $(gt_thumbs)" "deleted 1"
 # The other one trashed, then the trash emptied.
-gt_key ctrl+l; gt_type "$HOME/a"; gt_key Return; sleep 1
+gt_go "$HOME/a" 1
 gt_click 600 400; gt_type other; gt_key Escape; gt_key Delete; sleep 0.5; gt_key Return; sleep 2
-gt_check "trashed: its thumbnail kept (for a restore)" "$([ -e "$HOME/a/other.mp4" ] && echo there || echo trashed) $(thumbs)" "trashed 1"
+gt_check "trashed: its thumbnail kept (for a restore)" "$([ -e "$HOME/a/other.mp4" ] && echo there || echo trashed) $(gt_thumbs)" "trashed 1"
 # Its confirmation holds the action's D-Bus call until it's answered.
 gt_act empty-trash & sleep 1.5
 gt_ok "Empty Trash confirmed" gt_a11y press "Empty Trash"; sleep 2
-gt_check "trash emptied: its thumbnail gone" "$(find "$HOME/.local/share/Trash/files" -mindepth 1 | wc -l) $(thumbs)" "0 0"
+gt_check "trash emptied: its thumbnail gone" "$(find "$HOME/.local/share/Trash/files" -mindepth 1 | wc -l) $(gt_thumbs)" "0 0"
 gt_end

@@ -36,13 +36,13 @@ press() {
 }
 
 gt_click 900 650; gt_type big; gt_key Escape; gt_key ctrl+c
-gt_key ctrl+l; gt_type "$HOME/to1"; gt_key Return; gt_key shift+ctrl+v; sleep 1
+gt_go "$HOME/to1" 0; gt_key shift+ctrl+v; sleep 1
 # Paused until the second is queued: done before that, the second would
 # just start (on a fast machine it sometimes was).
 press Pause
-gt_key ctrl+l; gt_type "$HOME"; gt_key Return; sleep 0.3
+gt_go "$HOME" 0.3
 gt_click 900 650; gt_type second; gt_key Escape; gt_key ctrl+c
-gt_key ctrl+l; gt_type "$HOME/to2"; gt_key Return; gt_key shift+ctrl+v; sleep 0.3
+gt_go "$HOME/to2" 0; gt_key shift+ctrl+v; sleep 0.3
 gt_check "the second copy is queued (the first still runs)" "$([ -e "$HOME/to2/second" ] && echo started || echo queued)" "queued"
 press Resume
 timeout 10 gdbus call --session --dest $APP_ID --object-path $APP_PATH \

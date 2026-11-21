@@ -20,12 +20,12 @@ gt_display
 gt_arkha "$W"
 # A plain paste: no checking.
 gt_click 900 650; gt_type b.t; gt_key Escape; gt_key ctrl+c
-gt_key ctrl+l; gt_type "$W/plain"; gt_key Return; gt_key ctrl+v; sleep 1; gt_quiet
+gt_go "$W/plain" 0; gt_key ctrl+v; sleep 1; gt_quiet
 gt_check "a plain paste copies without checking" "$(ls "$W/plain") $(checks)" "b.txt 0"
 # Paste and Check.
 gt_key BackSpace; sleep 0.5; gt_quiet
 gt_click 900 650; gt_type a.b; gt_key Escape; gt_key ctrl+c
-gt_key ctrl+l; gt_type "$W/dest"; gt_key Return; gt_key shift+ctrl+v; checked 1; gt_quiet
+gt_go "$W/dest" 0; gt_key shift+ctrl+v; checked 1; gt_quiet
 gt_check "Paste and Check: copied and checked" "$(cmp -s "$W/a.bin" "$W/dest/a.bin" && echo same) $(checks)" "same 1"
 gt_key BackSpace; sleep 0.5; gt_quiet
 # Copy To with its box ticked: the dialog starts in the folder shown, so

@@ -12,14 +12,13 @@ mkdir -p "$HOME/A" "$HOME/B"
 magick -size 200x200 xc:red "$HOME/A/folder.jpg"
 magick -size 200x200 xc:blue "$HOME/B/folder.jpg"
 gt_display
-go() { gt_key ctrl+l; gt_type "$1"; gt_key Return; sleep 2; gt_quiet; }
 gt_arkha "$HOME/A"; sleep 2; gt_quiet
-go "$HOME/B"
-go "$HOME/A"
+gt_go "$HOME/B" 2
+gt_go "$HOME/A" 2
 gt_click 600 400; gt_key Home; gt_key Delete; sleep 0.5; gt_key Return; sleep 1
-go "$HOME/B"
+gt_go "$HOME/B" 2
 gt_click 600 400; gt_key Home; gt_key ctrl+x
-go "$HOME/A"
+gt_go "$HOME/A" 2
 gt_key ctrl+v; sleep 2; gt_quiet
 gt_shot after
 # The colour of the item's picture: its middle, by its red and blue.

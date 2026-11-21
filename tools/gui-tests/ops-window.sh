@@ -19,7 +19,7 @@ gt_arkha "$HOME"
 win() { gt_a11y windows | grep -c '^File Operations$'; }
 button() { gt_a11y where "1 file operation" >/dev/null && echo shown || echo none; }
 gt_click 900 650; gt_type big; gt_key Escape; gt_key ctrl+c
-gt_key ctrl+l; gt_type "$HOME/to"; gt_key Return; gt_key shift+ctrl+v; sleep 1.5
+gt_go "$HOME/to" 0; gt_key shift+ctrl+v; sleep 1.5
 # Held while it's looked at.
 gt_a11y press-in "File Operations" Pause
 gt_shot running

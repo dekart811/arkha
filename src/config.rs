@@ -2,203 +2,313 @@
 
 use std::cell::RefCell;
 
-#[derive(Clone, Debug)]
-pub struct Settings {
-    pub show_hidden: bool,
-    pub default_view: String, // "icon" | "list" | "compact"
+/// The settings, each declared once: its name (also its key in the file's
+/// [General] group), type, default and what it's for. The macro makes the
+/// struct, its defaults, and reading and writing them all (see Stored);
+/// what a setting needs checked after reading is in `checked`.
+macro_rules! settings {
+    ($( $(#[$m:meta])* $name:ident : $ty:ty = $default:expr ),* $(,)?) => {
+        #[derive(Clone, Debug)]
+        pub struct Settings {
+            $( $(#[$m])* pub $name: $ty, )*
+        }
+
+        impl Default for Settings {
+            fn default() -> Self {
+                Settings { $( $name: $default, )* }
+            }
+        }
+
+        /// Every setting `kf` has (each missing or unreadable one is left
+        /// as it is in `s`).
+        fn read_all(kf: &glib::KeyFile, s: &mut Settings) {
+            $( if let Some(v) = <$ty as Stored>::read(kf, stringify!($name)) {
+                s.$name = v;
+            } )*
+        }
+
+        /// Every setting, into `kf`.
+        fn write_all(kf: &glib::KeyFile, s: &Settings) {
+            $( Stored::write(&s.$name, kf, stringify!($name)); )*
+        }
+    };
+}
+
+/// How a setting's type is kept in the file, under its key in [General].
+trait Stored: Sized {
+    fn read(kf: &glib::KeyFile, key: &str) -> Option<Self>;
+    fn write(&self, kf: &glib::KeyFile, key: &str);
+}
+
+const GROUP: &str = "General";
+
+impl Stored for bool {
+    fn read(kf: &glib::KeyFile, key: &str) -> Option<Self> {
+        kf.boolean(GROUP, key).ok()
+    }
+    fn write(&self, kf: &glib::KeyFile, key: &str) {
+        kf.set_boolean(GROUP, key, *self);
+    }
+}
+
+impl Stored for i32 {
+    fn read(kf: &glib::KeyFile, key: &str) -> Option<Self> {
+        kf.integer(GROUP, key).ok()
+    }
+    fn write(&self, kf: &glib::KeyFile, key: &str) {
+        kf.set_integer(GROUP, key, *self);
+    }
+}
+
+impl Stored for u64 {
+    fn read(kf: &glib::KeyFile, key: &str) -> Option<Self> {
+        kf.uint64(GROUP, key).ok()
+    }
+    fn write(&self, kf: &glib::KeyFile, key: &str) {
+        kf.set_uint64(GROUP, key, *self);
+    }
+}
+
+impl Stored for String {
+    fn read(kf: &glib::KeyFile, key: &str) -> Option<Self> {
+        kf.string(GROUP, key).ok().map(|v| v.to_string())
+    }
+    fn write(&self, kf: &glib::KeyFile, key: &str) {
+        kf.set_string(GROUP, key, self);
+    }
+}
+
+impl Stored for Vec<String> {
+    fn read(kf: &glib::KeyFile, key: &str) -> Option<Self> {
+        kf.string_list(GROUP, key).ok().map(|v| v.iter().map(|x| x.to_string()).collect())
+    }
+    fn write(&self, kf: &glib::KeyFile, key: &str) {
+        set_string_list(kf, GROUP, key, self);
+    }
+}
+
+/// Zoom levels: only valid ones (see parse_levels), else the default stays.
+impl Stored for Vec<i32> {
+    fn read(kf: &glib::KeyFile, key: &str) -> Option<Self> {
+        kf.integer_list(GROUP, key).ok().and_then(|v| parse_levels(&format_levels(&v)))
+    }
+    fn write(&self, kf: &glib::KeyFile, key: &str) {
+        kf.set_value(GROUP, key, &self.iter().map(|l| format!("{l};")).collect::<String>());
+    }
+}
+
+/// The keyboard shortcuts changed: a group of their own, [Keybindings],
+/// action = its shortcuts (the key is unused).
+impl Stored for Vec<(String, Vec<String>)> {
+    fn read(kf: &glib::KeyFile, _: &str) -> Option<Self> {
+        let keys = kf.keys("Keybindings").ok()?;
+        let accels = |k: &str| kf.string_list("Keybindings", k).map(|v| v.iter().map(|a| a.to_string()).filter(|a| !a.is_empty()).collect()).unwrap_or_default();
+        Some(keys.iter().map(|k| (k.to_string(), accels(k))).collect())
+    }
+    fn write(&self, kf: &glib::KeyFile, _: &str) {
+        for (action, accels) in self {
+            set_string_list(kf, "Keybindings", action, accels);
+        }
+    }
+}
+
+settings! {
+    show_hidden: bool = false,
+    /// "icon" | "list" | "compact"
+    default_view: String = "icon".into(),
     /// Current zoom of each view in pixels; always one of its zoom levels.
-    pub icon_size: i32,
-    pub list_size: i32,
-    pub compact_size: i32,
+    icon_size: i32 = NORMAL_ICON,
+    list_size: i32 = NORMAL_LIST,
+    compact_size: i32 = NORMAL_COMPACT,
     /// The sizes Zoom In / Zoom Out step through, ascending.
-    pub icon_levels: Vec<i32>,
-    pub list_levels: Vec<i32>,
-    pub compact_levels: Vec<i32>,
-    pub sort_by: String,      // "name" | "size" | "type" | "mtime"
-    pub sort_desc: bool,
-    pub folders_first: bool,
-    pub width: i32,
-    pub height: i32,
-    pub maximized: bool,
-    pub sidebar_width: i32,
-    pub show_sidebar: bool,
-    pub show_statusbar: bool,
-    pub show_toolbar: bool,
+    icon_levels: Vec<i32> = ICON_SIZES.to_vec(),
+    list_levels: Vec<i32> = LIST_SIZES.to_vec(),
+    compact_levels: Vec<i32> = COMPACT_SIZES.to_vec(),
+    /// "name" | "size" | "type" | "mtime"
+    sort_by: String = "name".into(),
+    sort_desc: bool = false,
+    folders_first: bool = true,
+    width: i32 = 1000,
+    height: i32 = 650,
+    maximized: bool = false,
+    sidebar_width: i32 = 190,
+    show_sidebar: bool = true,
+    show_statusbar: bool = true,
+    show_toolbar: bool = true,
     /// The mouse's extra buttons go back and forward. As in Caja (whose
     /// dconf keys these are), only in the settings file, not in Preferences.
-    pub mouse_extra_buttons: bool,
-    pub mouse_back_button: i32,
-    pub mouse_forward_button: i32,
+    mouse_extra_buttons: bool = true,
+    mouse_back_button: i32 = 8,
+    mouse_forward_button: i32 = 9,
     /// Icons beside the names in the list view.
-    pub list_icons: bool,
+    list_icons: bool = true,
     /// The location bar (the path, the bar beside it). Hidden, it still
     /// shows while the location field or the search is open.
-    pub show_locbar: bool,
+    show_locbar: bool = true,
     /// The bar beside the path can't be rearranged: no accidental drags
     /// (on a touchpad, say).
-    pub lock_bar: bool,
+    lock_bar: bool = true,
     /// The status bar says how many items are hidden.
-    pub status_hidden: bool,
+    status_hidden: bool = false,
     /// Show the tab bar even with one tab (so that tab can be dragged).
-    pub always_show_tabs: bool,
+    always_show_tabs: bool = false,
     /// Text next to the icons of toolbar buttons (Back, Forward).
-    pub toolbar_text: bool,
+    toolbar_text: bool = false,
     /// Shell that runs custom context menu actions, as `<shell> -c <command>`.
-    pub action_shell: String,
+    action_shell: String = "sh".into(),
     /// The archive manager for Extract Here and Compress (its command, see
     /// util::ARCHIVERS), or "" for the one set for archives (see
     /// util::archiver_command).
-    pub archiver: String,
+    archiver: String = String::new(),
     /// In split view, the pane under the mouse pointer gets focus.
-    pub focus_follows_mouse: bool,
+    focus_follows_mouse: bool = false,
     /// How long (ms) the pointer has to stay over a pane before it takes the
     /// focus: passing over it on the way elsewhere doesn't count.
-    pub focus_follows_mouse_delay: i32,
+    focus_follows_mouse_delay: i32 = 300,
     /// Which pane stays when split view is turned off: "active" (the one
     /// in use) or "other".
-    pub split_keep: String,
+    split_keep: String = "active".into(),
     /// Where the extra pane opens: "same" (the folder of the pane in use),
     /// "home", "last" (where the closed pane was, `split_last`) or
     /// "folder" (`split_folder`).
-    pub split_opens: String,
+    split_opens: String = "same".into(),
     /// The folder (a URI) for split_opens "folder".
-    pub split_folder: String,
+    split_folder: String = String::new(),
     /// The folder (a URI) the pane that closed with split view last showed.
-    pub split_last: String,
+    split_last: String = String::new(),
     /// Where New Tab opens, as split_opens: "same" (the current tab's
     /// folder), "home", "last" (`tab_last`) or "folder" (`tab_folder`).
-    pub tab_opens: String,
-    pub tab_folder: String,
+    tab_opens: String = "same".into(),
+    tab_folder: String = String::new(),
     /// The folder (a URI) of the tab closed last.
-    pub tab_last: String,
-    /// New tabs go at the end of the tab bar (else right after the current one).
+    tab_last: String = String::new(),
     /// Where new tabs go: "in-order" (as Firefox puts them), "after" (right
     /// after the current tab) or "end".
-    pub new_tabs: String,
+    new_tabs: String = "in-order".into(),
     /// Button groups at the right end of the location bar.
-    pub show_zoom_buttons: bool,
-    pub show_view_buttons: bool,
-    pub show_split_button: bool,
+    show_zoom_buttons: bool = true,
+    show_view_buttons: bool = true,
+    show_split_button: bool = true,
     /// The Swap Panes button beside it (shown in split view).
-    pub show_swap_button: bool,
-    pub show_info_button: bool,
+    show_swap_button: bool = true,
+    show_info_button: bool = true,
     /// Order of the location bar items (see BAR_ITEMS); rearranged by dragging.
-    pub bar_order: Vec<String>,
+    bar_order: Vec<String> = BAR_ITEMS.iter().map(|g| g.to_string()).collect(),
     /// Order of the bulk rename window's tabs (see RENAME_TABS); rearranged by dragging.
-    pub rename_tab_order: Vec<String>,
+    rename_tab_order: Vec<String> = RENAME_TABS.iter().map(|t| t.to_string()).collect(),
     /// Order of the Properties window's tabs (see PROPS_TABS), the same way.
-    pub props_tab_order: Vec<String>,
+    props_tab_order: Vec<String> = PROPS_TABS.iter().map(|t| t.to_string()).collect(),
     /// The Properties tabs never shown (Preferences → Properties); never
     /// "basic", so the window always has a tab.
-    pub hidden_props_tabs: Vec<String>,
+    hidden_props_tabs: Vec<String> = vec![],
     /// The checksums the Checksums tab offers: all of them in their order
     /// (ids as checksums::Algo::id), and those not offered.
-    pub checksum_order: Vec<String>,
-    pub hidden_checksums: Vec<String>,
+    checksum_order: Vec<String> = crate::checksums::ALL.iter().map(|a| a.id().to_string()).collect(),
+    hidden_checksums: Vec<String> = crate::checksums::HIDDEN_AT_FIRST.iter().map(|t| t.to_string()).collect(),
     /// Order of the side pane's sections (see SIDEBAR_SECTIONS); rearranged
     /// by dragging their headings.
-    pub sidebar_sections: Vec<String>,
+    sidebar_sections: Vec<String> = SIDEBAR_SECTIONS.iter().map(|t| t.to_string()).collect(),
     /// The list view's columns after the name, in order (see details.rs).
-    pub list_columns: Vec<String>,
+    list_columns: Vec<String> = crate::details::DEFAULT_COLUMNS.iter().map(|t| t.to_string()).collect(),
     /// What shows under the names in the icon view, the more of them the
     /// bigger the icons (see details::shown_captions); "none" leaves a gap.
-    pub icon_captions: Vec<String>,
+    icon_captions: Vec<String> = crate::details::DEFAULT_CAPTIONS.iter().map(|t| t.to_string()).collect(),
     /// Side pane sections showing only their heading.
-    pub sidebar_collapsed: Vec<String>,
+    sidebar_collapsed: Vec<String> = vec![],
     /// Mount removable media when inserted (see sidebar::init_automount);
     /// only used without a desktop, whose own setting this is otherwise.
-    pub automount: bool,
+    automount: bool = true,
     /// The side pane's eject button only unmounts (no eject / power off).
-    pub unmount_only: bool,
+    unmount_only: bool = false,
     /// Separate automounters (udiskie, …) already told about, once each.
-    pub automounters_noticed: Vec<String>,
+    automounters_noticed: Vec<String> = vec![],
     /// What happens with media Arkha mounts when inserted (see autorun.rs),
     /// as the desktop's media-handling keys say, which are these otherwise
     /// (without one of GNOME, Cinnamon or MATE).
-    pub autorun_never: bool,
-    pub automount_open: bool,
-    pub autorun_start_app: Vec<String>,
-    pub autorun_ignore: Vec<String>,
-    pub autorun_open_folder: Vec<String>,
+    autorun_never: bool = false,
+    automount_open: bool = true,
+    autorun_start_app: Vec<String> = vec![],
+    autorun_ignore: Vec<String> = vec![],
+    autorun_open_folder: Vec<String> = vec![],
     /// Always show the location as editable text instead of breadcrumbs.
-    pub path_as_text: bool,
-    pub confirm_trash: bool,
+    path_as_text: bool = false,
+    confirm_trash: bool = true,
     /// File operations in their own window (opened when one takes a while)
     /// instead of the location bar's button and its popover.
-    pub ops_window: bool,
+    ops_window: bool = false,
     /// A new search looks in the subfolders too (each search can change it).
-    pub search_subfolders: bool,
-    pub single_click: bool,
+    search_subfolders: bool = true,
+    single_click: bool = false,
     /// Previews, as Caja has them, each "always", "local" (local files
     /// only: not GVfs places such as network shares) or "never" (see
     /// util::preview_on): thumbnails, a text file's first lines in its icon,
     /// and how many items a folder has.
-    pub show_thumbnails: String,
+    show_thumbnails: String = "local".into(),
     /// Colours added in Backgrounds and Emblems ("#rrggbb").
-    pub own_colors: Vec<String>,
+    own_colors: Vec<String> = vec![],
     /// The side pane's background: a colour ("#rrggbb") and/or a picture's
     /// URI (see backgrounds.rs); empty for the theme's.
-    pub side_pane_color: String,
-    pub side_pane_image: String,
-    pub text_in_icons: String,
-    pub count_items: String,
+    side_pane_color: String = String::new(),
+    side_pane_image: String = String::new(),
+    text_in_icons: String = "local".into(),
+    count_items: String = "local".into(),
     /// Images bigger than this (bytes) get no thumbnail (other files'
     /// thumbnailers decide for themselves), as in Caja.
-    pub thumbnail_limit: u64,
+    thumbnail_limit: u64 = 100 << 20,
     /// Side pane entries the user hid, by URI (or "label:Name" for unmounted drives).
-    pub hidden_places: Vec<String>,
+    hidden_places: Vec<String> = vec![],
     /// The Computer entries' order in the side pane, by the same keys
     /// (empty: the usual order; see sidebar::ordered_places).
-    pub places_order: Vec<String>,
+    places_order: Vec<String> = vec![],
     /// Built-in context menu items the user hid (keys from actions.rs).
-    pub hidden_menu_items: Vec<String>,
+    hidden_menu_items: Vec<String> = vec![],
     /// Order of the context menu for selected items and for a folder's
     /// empty space (see actions::menu_order); empty = the default.
-    pub menu_order: Vec<String>,
-    pub menu_order_bg: Vec<String>,
+    menu_order: Vec<String> = vec![],
+    menu_order_bg: Vec<String> = vec![],
     /// Height of side pane rows in pixels; 0 = whatever the theme uses.
-    pub sidebar_row_height: i32,
+    sidebar_row_height: i32 = 0,
     /// Remember view and sorting per folder (see folders.rs).
-    pub per_folder: bool,
+    per_folder: bool = true,
     /// Alternating row colors in the list view.
-    pub striped_rows: bool,
+    striped_rows: bool = false,
     /// The same in the bulk rename window's file list.
-    pub rename_striped_rows: bool,
+    rename_striped_rows: bool = true,
     /// File sizes in IEC units (KiB, MiB) instead of SI (kB, MB); see
     /// util::format_size.
-    pub iec_units: bool,
+    iec_units: bool = false,
     /// How dates are shown: "informal" (Today 14:00), "locale" or "iso".
-    pub date_format: String,
+    date_format: String = "informal".into(),
     /// The language of Arkha's texts (a translation's code, "en"), or ""
     /// for the system's; applies when Arkha starts (see i18n).
-    pub language: String,
+    language: String = String::new(),
     /// Folder covers (see info.rs): the file names looked for, ';'-separated
     /// and in order of preference, matched ignoring case.
-    pub cover_names: String,
+    cover_names: String = "folder.jpg; folder.png; cover.jpg; cover.png; front.jpg".into(),
     /// What the info panel shows while several items are selected:
     /// "summary" (their number and total size), "last" (the last item),
     /// "current" (the open folder) or "hide" (the panel hides).
-    pub info_several: String,
+    info_several: String = "summary".into(),
     /// For a selected folder without a cover: "icon" (a folder icon and
     /// the details) or "none" (nothing).
-    pub info_no_cover: String,
-    pub info_details: bool,
+    info_no_cover: String = "icon".into(),
+    info_details: bool = true,
     /// The info panel when folders don't remember their own settings.
-    pub info_panel: bool,
-    pub info_panel_width: i32,
+    info_panel: bool = false,
+    info_panel_width: i32 = 240,
     /// Middle-click on empty space (and on files in the list view) starts
     /// autoscrolling (see scroll.rs).
-    pub autoscroll: bool,
+    autoscroll: bool = true,
     /// "Media Info" tab (mediainfo output) in the properties dialog, and the
     /// kinds of files it's shown for.
-    pub media_info: bool,
-    pub media_info_video: bool,
-    pub media_info_audio: bool,
-    pub media_info_image: bool,
-    pub media_info_other: bool,
+    media_info: bool = true,
+    media_info_video: bool = true,
+    media_info_audio: bool = true,
+    media_info_image: bool = true,
+    media_info_other: bool = false,
     /// Shortcuts the user changed: (action, accelerators); an empty list
     /// means no shortcut. Actions not listed use their defaults (keys.rs).
-    pub keybindings: Vec<(String, Vec<String>)>,
+    keybindings: Vec<(String, Vec<String>)> = vec![],
 }
 
 /// The bulk rename window's tabs, in their default order.
@@ -260,111 +370,6 @@ pub fn format_levels(levels: &[i32]) -> String {
     levels.iter().map(|l| l.to_string()).collect::<Vec<_>>().join(", ")
 }
 
-impl Default for Settings {
-    fn default() -> Self {
-        Settings {
-            show_hidden: false,
-            default_view: "icon".into(),
-            icon_size: NORMAL_ICON,
-            list_size: NORMAL_LIST,
-            compact_size: NORMAL_COMPACT,
-            icon_levels: ICON_SIZES.to_vec(),
-            list_levels: LIST_SIZES.to_vec(),
-            compact_levels: COMPACT_SIZES.to_vec(),
-            sort_by: "name".into(),
-            sort_desc: false,
-            folders_first: true,
-            width: 1000,
-            height: 650,
-            maximized: false,
-            sidebar_width: 190,
-            show_sidebar: true,
-            show_statusbar: true,
-            show_toolbar: true,
-            mouse_extra_buttons: true,
-            mouse_back_button: 8,
-            mouse_forward_button: 9,
-            list_icons: true,
-            show_locbar: true,
-            lock_bar: true,
-            status_hidden: false,
-            always_show_tabs: false,
-            toolbar_text: false,
-            action_shell: "sh".into(),
-            archiver: String::new(),
-            focus_follows_mouse: false,
-            focus_follows_mouse_delay: 300,
-            split_keep: "active".into(),
-            split_opens: "same".into(),
-            split_folder: String::new(),
-            split_last: String::new(),
-            tab_opens: "same".into(),
-            tab_folder: String::new(),
-            tab_last: String::new(),
-            new_tabs: "in-order".into(),
-            show_zoom_buttons: true,
-            show_view_buttons: true,
-            show_split_button: true,
-            show_swap_button: true,
-            show_info_button: true,
-            bar_order: BAR_ITEMS.iter().map(|g| g.to_string()).collect(),
-            rename_tab_order: RENAME_TABS.iter().map(|t| t.to_string()).collect(),
-            props_tab_order: PROPS_TABS.iter().map(|t| t.to_string()).collect(),
-            hidden_props_tabs: vec![],
-            checksum_order: crate::checksums::ALL.iter().map(|a| a.id().to_string()).collect(),
-            hidden_checksums: crate::checksums::HIDDEN_AT_FIRST.iter().map(|t| t.to_string()).collect(),
-            sidebar_sections: SIDEBAR_SECTIONS.iter().map(|t| t.to_string()).collect(),
-            list_columns: crate::details::DEFAULT_COLUMNS.iter().map(|t| t.to_string()).collect(),
-            icon_captions: crate::details::DEFAULT_CAPTIONS.iter().map(|t| t.to_string()).collect(),
-            sidebar_collapsed: vec![],
-            automount: true,
-            unmount_only: false,
-            automounters_noticed: vec![],
-            autorun_never: false,
-            automount_open: true,
-            autorun_start_app: vec![],
-            autorun_ignore: vec![],
-            autorun_open_folder: vec![],
-            path_as_text: false,
-            confirm_trash: true,
-            ops_window: false,
-            search_subfolders: true,
-            single_click: false,
-            show_thumbnails: "local".into(),
-            own_colors: vec![],
-            side_pane_color: String::new(),
-            side_pane_image: String::new(),
-            text_in_icons: "local".into(),
-            count_items: "local".into(),
-            thumbnail_limit: 100 << 20,
-            hidden_places: vec![],
-            places_order: vec![],
-            hidden_menu_items: vec![],
-            menu_order: vec![],
-            menu_order_bg: vec![],
-            sidebar_row_height: 0,
-            per_folder: true,
-            striped_rows: false,
-            rename_striped_rows: true,
-            iec_units: false,
-            date_format: "informal".into(),
-            language: String::new(),
-            cover_names: "folder.jpg; folder.png; cover.jpg; cover.png; front.jpg".into(),
-            info_several: "summary".into(),
-            info_no_cover: "icon".into(),
-            info_details: true,
-            info_panel: false,
-            info_panel_width: 240,
-            autoscroll: true,
-            media_info: true,
-            media_info_video: true,
-            media_info_audio: true,
-            media_info_image: true,
-            media_info_other: false,
-            keybindings: vec![],
-        }
-    }
-}
 
 thread_local! {
     static SETTINGS: RefCell<Settings> = RefCell::new(load());
@@ -396,227 +401,76 @@ fn load() -> Settings {
 /// The settings in a config file; anything missing or invalid keeps its default.
 fn from_keyfile(kf: &glib::KeyFile) -> Settings {
     let mut s = Settings::default();
-    let g = "General";
-    macro_rules! b {
-        ($f:ident) => {
-            if let Ok(v) = kf.boolean(g, stringify!($f)) {
-                s.$f = v;
-            }
-        };
-    }
-    macro_rules! i {
-        ($f:ident) => {
-            if let Ok(v) = kf.integer(g, stringify!($f)) {
-                s.$f = v;
-            }
-        };
-    }
-    macro_rules! st {
-        ($f:ident) => {
-            if let Ok(v) = kf.string(g, stringify!($f)) {
-                s.$f = v.to_string();
-            }
-        };
-    }
-    b!(show_hidden);
-    st!(default_view);
-    macro_rules! levels {
-        ($f:ident) => {
-            if let Some(v) = kf.integer_list(g, stringify!($f)).ok().and_then(|v| parse_levels(&format_levels(&v))) {
-                s.$f = v;
-            }
-        };
-    }
-    levels!(icon_levels);
-    levels!(list_levels);
-    levels!(compact_levels);
-    i!(icon_size);
-    i!(list_size);
-    i!(compact_size);
+    read_all(kf, &mut s);
+    checked(s)
+}
+
+/// Settings as read, made valid: each zoom size one of its levels, the
+/// orders of known items only (each once, any missing at the end, or for
+/// the bar after the one it follows), the lists of known items only, the
+/// choices among their values, sizes in their range. Defaults are left as
+/// they are.
+fn checked(mut s: Settings) -> Settings {
     s.icon_size = snap(&s.icon_levels, s.icon_size);
     s.list_size = snap(&s.list_levels, s.list_size);
     s.compact_size = snap(&s.compact_levels, s.compact_size);
-    st!(sort_by);
-    b!(sort_desc);
-    b!(folders_first);
-    i!(width);
-    i!(height);
-    b!(maximized);
-    i!(sidebar_width);
-    b!(show_sidebar);
-    b!(show_statusbar);
-    b!(show_toolbar);
-    b!(mouse_extra_buttons);
-    i!(mouse_back_button);
-    i!(mouse_forward_button);
-    b!(list_icons);
-    b!(show_locbar);
-    b!(lock_bar);
-    b!(status_hidden);
-    b!(always_show_tabs);
-    b!(toolbar_text);
-    st!(action_shell);
-    st!(archiver);
-    b!(focus_follows_mouse);
-    i!(focus_follows_mouse_delay);
-    st!(split_keep);
-    st!(split_opens);
-    st!(split_folder);
-    st!(split_last);
-    st!(tab_opens);
-    st!(tab_folder);
-    st!(tab_last);
-    st!(new_tabs);
-    b!(show_zoom_buttons);
-    b!(show_view_buttons);
-    b!(show_split_button);
-    b!(show_swap_button);
-    b!(show_info_button);
-    b!(path_as_text);
-    // Known tabs once each; any missing (e.g. added later) go at the end.
-    let tab_order = |v: Vec<String>, known: &[&str]| -> Vec<String> {
+    // Known ones once each; any missing (e.g. added later) go at the end.
+    let ordered = |v: &[String], known: &[&str]| -> Vec<String> {
         let mut order: Vec<String> = vec![];
-        for id in v.into_iter().chain(known.iter().map(|t| t.to_string())) {
+        for id in v.iter().cloned().chain(known.iter().map(|t| t.to_string())) {
             if known.contains(&id.as_str()) && !order.contains(&id) {
                 order.push(id);
             }
         }
         order
     };
-    if let Ok(v) = kf.string_list(g, "rename_tab_order") {
-        s.rename_tab_order = tab_order(v.iter().map(|x| x.to_string()).collect(), &RENAME_TABS);
-    }
-    if let Ok(v) = kf.string_list(g, "props_tab_order") {
-        s.props_tab_order = tab_order(v.iter().map(|x| x.to_string()).collect(), &PROPS_TABS);
-    }
-    if let Ok(v) = kf.string_list(g, "hidden_props_tabs") {
-        let mut hidden: Vec<String> = vec![];
-        for t in v.iter().map(|x| x.to_string()) {
-            if t != "basic" && PROPS_TABS.contains(&t.as_str()) && !hidden.contains(&t) {
-                hidden.push(t);
-            }
+    s.rename_tab_order = ordered(&s.rename_tab_order, &RENAME_TABS);
+    s.props_tab_order = ordered(&s.props_tab_order, &PROPS_TABS);
+    let mut hidden: Vec<String> = vec![];
+    for t in &s.hidden_props_tabs {
+        if t != "basic" && PROPS_TABS.contains(&t.as_str()) && !hidden.contains(t) {
+            hidden.push(t.clone());
         }
-        s.hidden_props_tabs = hidden;
     }
+    s.hidden_props_tabs = hidden;
     let checksum_ids: Vec<&str> = crate::checksums::ALL.iter().map(|a| a.id()).collect();
-    if let Ok(v) = kf.string_list(g, "checksum_order") {
-        s.checksum_order = tab_order(v.iter().map(|x| x.to_string()).collect(), &checksum_ids);
-    }
-    if let Ok(v) = kf.string_list(g, "hidden_checksums") {
-        s.hidden_checksums = v.iter().map(|x| x.to_string()).filter(|id| checksum_ids.contains(&id.as_str())).collect();
-    }
-    if let Ok(v) = kf.string_list(g, "list_columns") {
-        let v: Vec<String> = v.iter().map(|x| x.to_string()).collect();
-        s.list_columns = crate::details::known(&v).iter().map(|t| t.to_string()).collect();
-    }
-    if let Ok(v) = kf.string_list(g, "icon_captions") {
-        // Three places; any not known are gaps.
-        let v: Vec<String> = v.iter().map(|x| x.to_string()).collect();
-        s.icon_captions = (0..3)
-            .map(|i| v.get(i).filter(|c| crate::details::known(std::slice::from_ref(c)).len() == 1).cloned().unwrap_or_else(|| "none".into()))
-            .collect();
-    }
-    if let Ok(v) = kf.string_list(g, "sidebar_sections") {
-        let mut order: Vec<String> = vec![];
-        for id in v.iter().map(|x| x.to_string()).chain(SIDEBAR_SECTIONS.iter().map(|t| t.to_string())) {
-            if SIDEBAR_SECTIONS.contains(&id.as_str()) && !order.contains(&id) {
-                order.push(id);
-            }
-        }
-        s.sidebar_sections = order;
-    }
-    b!(automount);
-    b!(unmount_only);
-    if let Ok(v) = kf.string_list(g, "bar_order") {
-        // Known ids once each. Missing ones (items added since it was
-        // saved) go after the one they follow by default, or first.
-        let mut order: Vec<String> = vec![];
-        for id in v.iter().map(|x| x.to_string()) {
-            if BAR_ITEMS.contains(&id.as_str()) && !order.contains(&id) {
-                order.push(id);
-            }
-        }
-        for (i, id) in BAR_ITEMS.iter().enumerate() {
-            if order.iter().any(|o| o == id) {
-                continue;
-            }
-            let at = BAR_ITEMS[..i].iter().rev().find_map(|prev| order.iter().position(|o| o == prev)).map_or(0, |p| p + 1);
-            order.insert(at, id.to_string());
-        }
-        s.bar_order = order;
-    }
-    b!(confirm_trash);
-    b!(ops_window);
-    b!(search_subfolders);
-    b!(single_click);
-    for (key, field) in [("show_thumbnails", &mut s.show_thumbnails), ("text_in_icons", &mut s.text_in_icons), ("count_items", &mut s.count_items)] {
-        if let Ok(v) = kf.string(g, key) {
-            if ["always", "local", "never"].contains(&v.as_str()) {
-                *field = v.to_string();
-            }
+    s.checksum_order = ordered(&s.checksum_order, &checksum_ids);
+    s.hidden_checksums.retain(|id| checksum_ids.contains(&id.as_str()));
+    s.list_columns = crate::details::known(&s.list_columns).iter().map(|t| t.to_string()).collect();
+    // Three places; any not known are gaps.
+    let captions = std::mem::take(&mut s.icon_captions);
+    s.icon_captions = (0..3)
+        .map(|i| captions.get(i).filter(|c| crate::details::known(std::slice::from_ref(c)).len() == 1).cloned().unwrap_or_else(|| "none".into()))
+        .collect();
+    s.sidebar_sections = ordered(&s.sidebar_sections, &SIDEBAR_SECTIONS);
+    s.sidebar_collapsed.retain(|x| SIDEBAR_SECTIONS.contains(&x.as_str()));
+    // The bar: known ids once each; missing ones (items added since it was
+    // saved) go after the one they follow by default, or first.
+    let mut order: Vec<String> = vec![];
+    for id in &s.bar_order {
+        if BAR_ITEMS.contains(&id.as_str()) && !order.contains(id) {
+            order.push(id.clone());
         }
     }
-    if let Ok(v) = kf.string_list(g, "own_colors") {
-        s.own_colors = v.iter().map(|x| x.to_string()).filter(|c| gdk::RGBA::parse(c).is_ok()).collect();
+    for (i, id) in BAR_ITEMS.iter().enumerate() {
+        if order.iter().any(|o| o == id) {
+            continue;
+        }
+        let at = BAR_ITEMS[..i].iter().rev().find_map(|prev| order.iter().position(|o| o == prev)).map_or(0, |p| p + 1);
+        order.insert(at, id.to_string());
     }
-    st!(side_pane_color);
-    st!(side_pane_image);
-    if let Ok(v) = kf.uint64(g, "thumbnail_limit") {
-        s.thumbnail_limit = v;
-    }
-    i!(sidebar_row_height);
-    b!(per_folder);
-    b!(striped_rows);
-    b!(rename_striped_rows);
-    b!(iec_units);
-    st!(date_format);
-    st!(language);
-    st!(cover_names);
-    st!(info_several);
-    st!(info_no_cover);
-    b!(info_details);
-    b!(info_panel);
-    i!(info_panel_width);
-    b!(autoscroll);
-    b!(media_info);
-    b!(media_info_video);
-    b!(media_info_audio);
-    b!(media_info_image);
-    b!(media_info_other);
-    if let Ok(keys) = kf.keys("Keybindings") {
-        for k in keys.iter() {
-            let accels = kf.string_list("Keybindings", k).map(|v| v.iter().map(|a| a.to_string()).filter(|a| !a.is_empty()).collect()).unwrap_or_default();
-            s.keybindings.push((k.to_string(), accels));
+    s.bar_order = order;
+    let defaults = Settings::default();
+    for (field, default) in [
+        (&mut s.show_thumbnails, &defaults.show_thumbnails),
+        (&mut s.text_in_icons, &defaults.text_in_icons),
+        (&mut s.count_items, &defaults.count_items),
+    ] {
+        if !["always", "local", "never"].contains(&field.as_str()) {
+            *field = default.clone();
         }
     }
-    if let Ok(v) = kf.string_list(g, "sidebar_collapsed") {
-        s.sidebar_collapsed = v.iter().map(|x| x.to_string()).filter(|x| SIDEBAR_SECTIONS.contains(&x.as_str())).collect();
-    }
-    if let Ok(v) = kf.string_list(g, "automounters_noticed") {
-        s.automounters_noticed = v.iter().map(|x| x.to_string()).collect();
-    }
-    b!(autorun_never);
-    b!(automount_open);
-    for (key, list) in [("autorun_start_app", &mut s.autorun_start_app), ("autorun_ignore", &mut s.autorun_ignore), ("autorun_open_folder", &mut s.autorun_open_folder)] {
-        if let Ok(v) = kf.string_list(g, key) {
-            *list = v.iter().map(|x| x.to_string()).collect();
-        }
-    }
-    if let Ok(v) = kf.string_list(g, "hidden_places") {
-        s.hidden_places = v.iter().map(|x| x.to_string()).collect();
-    }
-    if let Ok(v) = kf.string_list(g, "places_order") {
-        s.places_order = v.iter().map(|x| x.to_string()).collect();
-    }
-    if let Ok(v) = kf.string_list(g, "menu_order") {
-        s.menu_order = v.iter().map(|x| x.to_string()).collect();
-    }
-    if let Ok(v) = kf.string_list(g, "menu_order_bg") {
-        s.menu_order_bg = v.iter().map(|x| x.to_string()).collect();
-    }
-    if let Ok(v) = kf.string_list(g, "hidden_menu_items") {
-        s.hidden_menu_items = v.iter().map(|x| x.to_string()).collect();
-    }
+    s.own_colors.retain(|c| gdk::RGBA::parse(c).is_ok());
     s.sidebar_row_height = s.sidebar_row_height.clamp(0, 200);
     s.info_panel_width = s.info_panel_width.clamp(120, 1200);
     s
@@ -664,114 +518,21 @@ fn save() {
 
 fn to_keyfile(s: &Settings) -> glib::KeyFile {
     let kf = glib::KeyFile::new();
-    let g = "General";
-    kf.set_boolean(g, "show_hidden", s.show_hidden);
-    kf.set_string(g, "default_view", &s.default_view);
-    kf.set_integer(g, "icon_size", s.icon_size);
-    kf.set_integer(g, "list_size", s.list_size);
-    kf.set_integer(g, "compact_size", s.compact_size);
-    for (key, levels) in [("icon_levels", &s.icon_levels), ("list_levels", &s.list_levels), ("compact_levels", &s.compact_levels)] {
-        kf.set_value(g, key, &levels.iter().map(|l| format!("{l};")).collect::<String>());
-    }
-    kf.set_string(g, "sort_by", &s.sort_by);
-    kf.set_boolean(g, "sort_desc", s.sort_desc);
-    kf.set_boolean(g, "folders_first", s.folders_first);
-    kf.set_integer(g, "width", s.width);
-    kf.set_integer(g, "height", s.height);
-    kf.set_boolean(g, "maximized", s.maximized);
-    kf.set_integer(g, "sidebar_width", s.sidebar_width);
-    kf.set_boolean(g, "show_sidebar", s.show_sidebar);
-    kf.set_boolean(g, "show_statusbar", s.show_statusbar);
-    kf.set_boolean(g, "show_toolbar", s.show_toolbar);
-    kf.set_boolean(g, "mouse_extra_buttons", s.mouse_extra_buttons);
-    kf.set_integer(g, "mouse_back_button", s.mouse_back_button);
-    kf.set_integer(g, "mouse_forward_button", s.mouse_forward_button);
-    kf.set_boolean(g, "list_icons", s.list_icons);
-    kf.set_boolean(g, "show_locbar", s.show_locbar);
-    kf.set_boolean(g, "lock_bar", s.lock_bar);
-    kf.set_boolean(g, "status_hidden", s.status_hidden);
-    kf.set_boolean(g, "always_show_tabs", s.always_show_tabs);
-    kf.set_boolean(g, "toolbar_text", s.toolbar_text);
-    kf.set_string(g, "action_shell", &s.action_shell);
-    kf.set_string(g, "archiver", &s.archiver);
-    kf.set_boolean(g, "focus_follows_mouse", s.focus_follows_mouse);
-    kf.set_integer(g, "focus_follows_mouse_delay", s.focus_follows_mouse_delay);
-    kf.set_string(g, "split_keep", &s.split_keep);
-    kf.set_string(g, "split_opens", &s.split_opens);
-    kf.set_string(g, "split_folder", &s.split_folder);
-    kf.set_string(g, "split_last", &s.split_last);
-    kf.set_string(g, "tab_opens", &s.tab_opens);
-    kf.set_string(g, "tab_folder", &s.tab_folder);
-    kf.set_string(g, "tab_last", &s.tab_last);
-    kf.set_string(g, "new_tabs", &s.new_tabs);
-    kf.set_boolean(g, "show_zoom_buttons", s.show_zoom_buttons);
-    kf.set_boolean(g, "show_view_buttons", s.show_view_buttons);
-    kf.set_boolean(g, "show_split_button", s.show_split_button);
-    kf.set_boolean(g, "show_swap_button", s.show_swap_button);
-    kf.set_boolean(g, "show_info_button", s.show_info_button);
-    set_string_list(&kf, g, "bar_order", &s.bar_order);
-    set_string_list(&kf, g, "rename_tab_order", &s.rename_tab_order);
-    set_string_list(&kf, g, "props_tab_order", &s.props_tab_order);
-    set_string_list(&kf, g, "hidden_props_tabs", &s.hidden_props_tabs);
-    set_string_list(&kf, g, "checksum_order", &s.checksum_order);
-    set_string_list(&kf, g, "hidden_checksums", &s.hidden_checksums);
-    set_string_list(&kf, g, "sidebar_sections", &s.sidebar_sections);
-    set_string_list(&kf, g, "list_columns", &s.list_columns);
-    set_string_list(&kf, g, "icon_captions", &s.icon_captions);
-    kf.set_boolean(g, "automount", s.automount);
-    kf.set_boolean(g, "unmount_only", s.unmount_only);
-    kf.set_boolean(g, "path_as_text", s.path_as_text);
-    kf.set_boolean(g, "confirm_trash", s.confirm_trash);
-    kf.set_boolean(g, "ops_window", s.ops_window);
-    kf.set_boolean(g, "search_subfolders", s.search_subfolders);
-    kf.set_boolean(g, "single_click", s.single_click);
-    kf.set_string(g, "show_thumbnails", &s.show_thumbnails);
-    set_string_list(&kf, g, "own_colors", &s.own_colors);
-    kf.set_string(g, "side_pane_color", &s.side_pane_color);
-    kf.set_string(g, "side_pane_image", &s.side_pane_image);
-    kf.set_string(g, "text_in_icons", &s.text_in_icons);
-    kf.set_string(g, "count_items", &s.count_items);
-    kf.set_uint64(g, "thumbnail_limit", s.thumbnail_limit);
-    kf.set_integer(g, "sidebar_row_height", s.sidebar_row_height);
-    kf.set_boolean(g, "per_folder", s.per_folder);
-    kf.set_boolean(g, "striped_rows", s.striped_rows);
-    kf.set_boolean(g, "rename_striped_rows", s.rename_striped_rows);
-    kf.set_boolean(g, "iec_units", s.iec_units);
-    kf.set_string(g, "date_format", &s.date_format);
-    kf.set_string(g, "language", &s.language);
-    kf.set_string(g, "cover_names", &s.cover_names);
-    kf.set_string(g, "info_several", &s.info_several);
-    kf.set_string(g, "info_no_cover", &s.info_no_cover);
-    kf.set_boolean(g, "info_details", s.info_details);
-    kf.set_boolean(g, "info_panel", s.info_panel);
-    kf.set_integer(g, "info_panel_width", s.info_panel_width);
-    kf.set_boolean(g, "autoscroll", s.autoscroll);
-    kf.set_boolean(g, "media_info", s.media_info);
-    kf.set_boolean(g, "media_info_video", s.media_info_video);
-    kf.set_boolean(g, "media_info_audio", s.media_info_audio);
-    kf.set_boolean(g, "media_info_image", s.media_info_image);
-    kf.set_boolean(g, "media_info_other", s.media_info_other);
-    for (action, accels) in &s.keybindings {
-        set_string_list(&kf, "Keybindings", action, accels);
-    }
-    set_string_list(&kf, g, "hidden_places", &s.hidden_places);
-    set_string_list(&kf, g, "places_order", &s.places_order);
-    set_string_list(&kf, g, "automounters_noticed", &s.automounters_noticed);
-    kf.set_boolean(g, "autorun_never", s.autorun_never);
-    kf.set_boolean(g, "automount_open", s.automount_open);
-    set_string_list(&kf, g, "autorun_start_app", &s.autorun_start_app);
-    set_string_list(&kf, g, "autorun_ignore", &s.autorun_ignore);
-    set_string_list(&kf, g, "autorun_open_folder", &s.autorun_open_folder);
-    set_string_list(&kf, g, "sidebar_collapsed", &s.sidebar_collapsed);
-    set_string_list(&kf, g, "hidden_menu_items", &s.hidden_menu_items);
-    set_string_list(&kf, g, "menu_order", &s.menu_order);
-    set_string_list(&kf, g, "menu_order_bg", &s.menu_order_bg);
+    write_all(&kf, s);
     kf
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn checks_leave_the_defaults() {
+        // (They run on every setting now, read or not.)
+        let d = Settings::default();
+        assert_eq!(to_keyfile(&checked(d.clone())).to_data(), to_keyfile(&d).to_data());
+        assert_eq!(to_keyfile(&from_keyfile(&glib::KeyFile::new())).to_data(), to_keyfile(&d).to_data(), "an empty file: the defaults");
+    }
 
     #[test]
     fn levels() {

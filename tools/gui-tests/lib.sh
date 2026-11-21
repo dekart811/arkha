@@ -141,6 +141,50 @@ gt_key() { xdotool key --delay 80 "$@"; sleep 0.4; gt_quiet; }
 gt_type() { xdotool type --delay 50 "$1"; sleep 0.3; }
 gt_click() { xdotool mousemove "$1" "$2" click "${3:-1}"; sleep 0.5; gt_quiet; }
 
+# gt_go PATH [SECONDS]: types PATH into the location bar (Ctrl+L), then
+# waits SECONDS (default 0.8) and for quiet.
+gt_go() { gt_key ctrl+l; gt_type "$1"; gt_key Return; sleep "${2:-0.8}"; gt_quiet; }
+
+# gt_title [SECONDS]: the first window's title (GT_A11Y=1), after SECONDS.
+gt_title() { [ -z "$1" ] || sleep "$1"; gt_a11y windows | head -1; }
+
+# gt_conf KEY VALUE: sets KEY in arkha.conf's [General] group (with Arkha
+# closed: it writes the file when it quits), replacing the line it had.
+gt_conf() {
+  local f=$XDG_CONFIG_HOME/arkha/arkha.conf
+  mkdir -p "${f%/*}"; [ -f "$f" ] || : > "$f"
+  grep -qx '\[General\]' "$f" || printf '[General]\n' >> "$f"
+  # (Through the environment: awk -v would read backslashes in VALUE.)
+  GT_K=$1 GT_V=$2 awk '
+    /^\[/ { general = ($0 == "[General]") }
+    general && index($0, ENVIRON["GT_K"] "=") == 1 { next }
+    { print }
+    $0 == "[General]" { print ENVIRON["GT_K"] "=" ENVIRON["GT_V"] }
+  ' "$f" > "$f.new" && mv "$f.new" "$f"
+}
+
+# gt_prefs [PAGE]: opens Preferences, and selects page PAGE (counted from
+# 0, as listed: 1 is Behavior) if given. The call returns only once the
+# window closes, so it's started apart.
+gt_prefs() {
+  gdbus call --session --dest $APP_ID --object-path $APP_PATH/window/1 \
+    --method org.gtk.Actions.Activate preferences [] {} >/dev/null & sleep 2
+  [ -z "$1" ] || gt_prefs_page "$1"
+}
+
+# gt_prefs_page PAGE: clicks page PAGE in Preferences' list of pages.
+gt_prefs_page() {
+  local y=180; [ "$BACKEND" = wayland ] && y=194
+  gt_click 240 $((y + $1 * 39)); sleep 0.5
+}
+
+# gt_prefs_scroll: scrolls the page down to its end, with the pointer over
+# the labels on the left (a choice under it would change instead).
+gt_prefs_scroll() { xdotool mousemove 380 450; for _ in $(seq 10); do xdotool click 5; done; sleep 0.5; }
+
+# gt_thumbs: how many thumbnails the test home's cache has (failures not counted).
+gt_thumbs() { find "$HOME/.cache/thumbnails" -name '*.png' -not -path '*/fail/*' 2>/dev/null | wc -l; }
+
 # gt_shot NAME: a screenshot of the whole screen, NAME.png in the run folder.
 gt_shot() { import -window root "$OUT/$1.png" 2>/dev/null; }
 

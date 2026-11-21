@@ -9,18 +9,17 @@ gt_session "$@"
 mkdir -p "$HOME/a/b/c" "$HOME/old name"; touch "$HOME/a/b/c/file.txt"
 gt_display
 gt_arkha "$HOME/a/b/c"
-title() { gt_a11y windows | head -1; }
-gt_check "showing c" "$(title)" "c"
+gt_check "showing c" "$(gt_title)" "c"
 rm -rf "$HOME/a/b"; sleep 2
-gt_check "c deleted (with b): the tab shows a" "$(title)" "a"
-gt_key ctrl+l; gt_type "$HOME/old name"; gt_key Return; sleep 1
+gt_check "c deleted (with b): the tab shows a" "$(gt_title)" "a"
+gt_go "$HOME/old name" 1
 mv "$HOME/old name" "$HOME/new name"; sleep 2
 gt_shot renamed
-case "$(title)" in
+case "$(gt_title)" in
   "new name") echo "PASS renamed: the tab follows it (to new name)" >> "$OUT/result" ;;
   # (The home folder's title: "Home". The system doesn't tell where a
   # renamed open folder went.)
   Home|"$(basename "$HOME")") echo "PASS renamed: the tab goes to the folder above" >> "$OUT/result" ;;
-  *) gt_check "renamed: the tab follows or goes above" "$(title)" "new name" ;;
+  *) gt_check "renamed: the tab follows or goes above" "$(gt_title)" "new name" ;;
 esac
 gt_end

@@ -12,7 +12,6 @@ gt_session "$@"
 
 mkdir -p "$HOME/nav/a/b"; touch "$HOME/nav/file1" "$HOME/nav/a/file2"
 gt_display
-title() { gt_a11y windows | head -1; }
 n=0
 while read -r name view settings b1 b2 want1 want2; do
   n=$((n+1))
@@ -20,8 +19,8 @@ while read -r name view settings b1 b2 want1 want2; do
   gt_arkha "$HOME/nav/a/b"
   gt_act up; gt_act up
   xdotool mousemove 900 650; sleep 0.2
-  gt_click 900 650 "$b1"; gt_shot "$name-1"; gt_check "$name: button $b1" "$(title)" "$want1"
-  gt_click 900 650 "$b2"; gt_shot "$name-2"; gt_check "$name: button $b2" "$(title)" "$want2"
+  gt_click 900 650 "$b1"; gt_shot "$name-1"; gt_check "$name: button $b1" "$(gt_title)" "$want1"
+  gt_click 900 650 "$b2"; gt_shot "$name-2"; gt_check "$name: button $b2" "$(gt_title)" "$want2"
   if [ $n -le 2 ]; then
     # Right click on empty space: the folder's menu, nothing selected.
     gt_click 900 650 3; gt_shot "$name-menu-space"; gt_key Escape

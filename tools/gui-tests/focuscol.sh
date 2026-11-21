@@ -23,6 +23,6 @@ gt_act view-mode "<'columns'>"; gt_shot columns
 gt_key Down Down; gt_act reload; gt_act view-mode "<'list'>"; gt_act view-mode "<'columns'>"; gt_act reload
 gt_shot moved
 gt_act view-mode "<'list'>"; gt_shot list
-gt_check "the list view's columns are back" "$(gt_a11y windows | head -1)" "files"
+gt_check "the list view's columns are back" "$(gt_title)" "files"
 kill $L 2>/dev/null
 gt_end

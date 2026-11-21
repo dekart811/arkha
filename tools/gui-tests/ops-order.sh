@@ -20,9 +20,9 @@ for d, n in (('first', 4000), ('second', 2500), ('third', 50)):
 gt_display
 gt_arkha "$HOME"
 copy() {  # copy NAME TO: a checked copy of ~/NAME into ~/TO
-  gt_key ctrl+l; gt_type "$HOME"; gt_key Return; sleep 0.3
+  gt_go "$HOME" 0.3
   gt_click 900 650; gt_type "$1"; gt_key Escape; gt_key ctrl+c
-  gt_key ctrl+l; gt_type "$HOME/$2"; gt_key Return; gt_key shift+ctrl+v; sleep 0.3
+  gt_go "$HOME/$2" 0; gt_key shift+ctrl+v; sleep 0.3
 }
 # The operations button's tooltip says how many operations there are.
 popover() { local n; for n in "1 file operation" "2 file operations" "3 file operations"; do gt_a11y press-in "*" "$n" && return; done; return 1; }

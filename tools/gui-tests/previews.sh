@@ -10,17 +10,16 @@ gt_session "$@"
 T=$HOME/pics; mkdir -p "$T/folder"; touch "$T/folder/x" "$T/folder/y"
 for c in red green blue; do magick -size 200x150 "xc:$c" "$T/$c.png"; done
 magick -size 1000x1000 xc: +noise Random "$T/big.png"     # about 3 MB
-thumbs() { find "$HOME/.cache/thumbnails" -name '*.png' -not -path '*/fail/*' 2>/dev/null | wc -l; }
 conf() { printf '[General]\nper_folder=false\n%s\n' "$1" > "$XDG_CONFIG_HOME/arkha/arkha.conf"; rm -rf "$HOME/.cache/thumbnails"; }
 gt_display
 conf 'show_thumbnails=always
 thumbnail_limit=1048576'
 gt_arkha "$T"; sleep 3; gt_quiet; gt_shot always
-gt_check "thumbnails always, up to 1 MB: the three small pictures" "$(thumbs)" "3"
+gt_check "thumbnails always, up to 1 MB: the three small pictures" "$(gt_thumbs)" "3"
 gt_quit
 conf 'show_thumbnails=never'
 gt_arkha "$T"; sleep 3; gt_quiet; gt_shot never
-gt_check "thumbnails never" "$(thumbs)" "0"
+gt_check "thumbnails never" "$(gt_thumbs)" "0"
 gt_quit
 conf 'default_view=list
 count_items=always'

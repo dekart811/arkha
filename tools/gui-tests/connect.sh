@@ -41,7 +41,7 @@ case "$w" in *"Could not open “sftp://127.0.0.1:1/srv”"*) s=yes ;; *) s="no:
 gt_check "a server that refuses: the window says so" "$s" "yes"
 
 if [ -n "$ARKHA_TEST_SFTP" ]; then
-  gt_key ctrl+l; gt_type "sftp://$ARKHA_TEST_SFTP/"; gt_key Return; sleep 4; gt_quiet
+  gt_go "sftp://$ARKHA_TEST_SFTP/" 4
   w=$(gt_a11y window-labels | tr '\n' '|')
   case "$w" in *"|$ARKHA_TEST_SFTP|"*) s=yes ;; *) s="no: $w" ;; esac
   gt_check "sftp://$ARKHA_TEST_SFTP/ mounted (in the side pane)" "$s" "yes"
@@ -51,7 +51,7 @@ if [ -n "$ARKHA_TEST_SFTP" ]; then
 fi
 
 if [ -n "$ARKHA_TEST_SMB" ]; then
-  gt_key ctrl+l; gt_type "smb://$ARKHA_TEST_SMB"; gt_key Return; sleep 3
+  gt_go "smb://$ARKHA_TEST_SMB" 3
   l=$(labels)
   gt_check "smb://: GTK asks for the password" "$(has "$l" "Authentication Required")" "yes"
   gt_key Escape; sleep 2; gt_quiet

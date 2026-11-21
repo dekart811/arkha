@@ -17,7 +17,7 @@ touch "$HOME/Downloads/report-1.txt" "$HOME/Downloads/old/report-2.txt" "$HOME/D
 gt_display
 gt_arkha "$HOME/sorted"
 # A second tab with Downloads, searched for "report".
-gt_key ctrl+t; gt_key ctrl+l; gt_type "$HOME/Downloads"; gt_key Return; sleep 0.5
+gt_key ctrl+t; gt_go "$HOME/Downloads" 0.5
 gt_key ctrl+f; gt_type report; gt_key Return; sleep 2
 gt_shot results
 # The results get the focus (the search field has it), all of them are cut.
@@ -40,7 +40,7 @@ gt_check "the moved files left the search results" "$(results)" ""
 gt_key ctrl+f; gt_key ctrl+a; gt_type invoice; gt_key Return; sleep 2
 gt_check "the new search finds it" "$(results)" "invoice.txt "
 gt_click 500 270; gt_key ctrl+a; gt_key ctrl+x
-gt_key ctrl+Page_Up; gt_key ctrl+l; gt_type "$HOME/Downloads/archive"; gt_key Return; sleep 0.5
+gt_key ctrl+Page_Up; gt_go "$HOME/Downloads/archive" 0.5
 gt_key ctrl+v
 for _ in $(seq 1 30); do [ -e "$HOME/Downloads/archive/invoice.txt" ] && break; sleep 0.2; done
 gt_key ctrl+Page_Down; sleep 1
