@@ -2,6 +2,7 @@
 
 mod a11y;
 mod actions;
+mod arkdnd;
 mod autorun;
 mod bulkrename;
 mod checksums;

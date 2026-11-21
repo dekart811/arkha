@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Arkha 1.3.0-dev\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-21 17:43+0100\n"
+"POT-Creation-Date: 2026-11-21 18:00+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -199,7 +199,16 @@ msgstr ""
 msgid "Archives"
 msgstr ""
 
-#: src/autorun.rs:194 src/window.rs:3364
+#: src/arkdnd.rs:89
+#, rust-format
+msgid "Ark didn’t answer: {error}"
+msgstr ""
+
+#: src/arkdnd.rs:89
+msgid "Could not extract the files"
+msgstr ""
+
+#: src/autorun.rs:194 src/window.rs:3372
 #, rust-format
 msgid "Could not open “{name}”"
 msgstr ""
@@ -314,8 +323,8 @@ msgstr ""
 
 #: src/autorun.rs:348 src/backgrounds.rs:379 src/backgrounds.rs:429
 #: src/connect.rs:89 src/ops.rs:2322 src/ops.rs:2386 src/props.rs:580
-#: src/props.rs:678 src/props.rs:1205 src/sidebar.rs:842 src/window.rs:2800
-#: src/window.rs:3020 src/window.rs:3148 src/window.rs:3260
+#: src/props.rs:678 src/props.rs:1205 src/sidebar.rs:842 src/window.rs:2808
+#: src/window.rs:3028 src/window.rs:3156 src/window.rs:3268
 #: src/window/prefs.rs:939 src/window/prefs.rs:1492 src/window/prefs.rs:1609
 #: src/window/prefs.rs:1685
 msgid "_Cancel"
@@ -416,7 +425,7 @@ msgid "Backgrounds and Emblems"
 msgstr ""
 
 #: src/backgrounds.rs:231 src/bulkrename.rs:566 src/props.rs:86
-#: src/window.rs:2208 src/window.rs:3294 src/window.rs:3401 src/window.rs:3416
+#: src/window.rs:2208 src/window.rs:3302 src/window.rs:3409 src/window.rs:3424
 msgid "_Close"
 msgstr ""
 
@@ -1105,7 +1114,7 @@ msgstr ""
 msgid "Opening"
 msgstr ""
 
-#: src/keys.rs:59 src/window.rs:3453
+#: src/keys.rs:59 src/window.rs:3461
 msgid "Open in new tab"
 msgstr ""
 
@@ -1543,7 +1552,7 @@ msgstr ""
 msgid "Resume"
 msgstr ""
 
-#: src/ops.rs:1505 src/window.rs:3177
+#: src/ops.rs:1505 src/window.rs:3185
 msgid "Cancel"
 msgstr ""
 
@@ -2567,7 +2576,7 @@ msgstr ""
 msgid "Re_name…"
 msgstr ""
 
-#: src/sidebar.rs:808 src/window.rs:3128 src/window/menus.rs:37
+#: src/sidebar.rs:808 src/window.rs:3136 src/window/menus.rs:37
 #: src/window/menus.rs:225
 msgid "_Empty Trash"
 msgstr ""
@@ -2786,119 +2795,119 @@ msgstr ""
 msgid "Choose the order of information to appear in the list view."
 msgstr ""
 
-#: src/window.rs:2778
+#: src/window.rs:2786
 #, rust-format
 msgid "Could not open with {program}"
 msgstr ""
 
-#: src/window.rs:2790
+#: src/window.rs:2798
 #, rust-format
 msgid "Do you want to run “{name}”, or display its contents?"
 msgstr ""
 
-#: src/window.rs:2792
+#: src/window.rs:2800
 #, rust-format
 msgid "“{name}” is an executable file."
 msgstr ""
 
-#: src/window.rs:2795
+#: src/window.rs:2803
 msgid "Run in _Terminal"
 msgstr ""
 
-#: src/window.rs:2798
+#: src/window.rs:2806
 msgid "_Display"
 msgstr ""
 
-#: src/window.rs:2801
+#: src/window.rs:2809
 msgid "_Run"
 msgstr ""
 
-#: src/window.rs:2828
+#: src/window.rs:2836
 msgid "Could not run the program"
 msgstr ""
 
-#: src/window.rs:2869
+#: src/window.rs:2877
 msgid "Untitled Folder"
 msgstr ""
 
-#: src/window.rs:2877
+#: src/window.rs:2885
 msgid "Could not create the folder"
 msgstr ""
 
-#: src/window.rs:2886
+#: src/window.rs:2894
 msgid "Untitled Document"
 msgstr ""
 
-#: src/window.rs:2904
+#: src/window.rs:2912
 msgid "Could not create the document"
 msgstr ""
 
-#: src/window.rs:2910
+#: src/window.rs:2918
 msgid "File names cannot contain “/”."
 msgstr ""
 
-#: src/window.rs:2910
+#: src/window.rs:2918
 msgid "Invalid name"
 msgstr ""
 
-#: src/window.rs:2919
+#: src/window.rs:2927
 #, rust-format
 msgid "The name “{name}” is already used in this location."
 msgstr ""
 
-#: src/window.rs:2920
+#: src/window.rs:2928
 msgid "Please use a different name."
 msgstr ""
 
-#: src/window.rs:2932
+#: src/window.rs:2940
 #, rust-format
 msgid "Could not rename “{name}”"
 msgstr ""
 
-#: src/window.rs:2956
+#: src/window.rs:2964
 msgid "There is nothing on the clipboard to paste."
 msgstr ""
 
-#: src/window.rs:3018
+#: src/window.rs:3026
 msgid "Copy To"
 msgstr ""
 
-#: src/window.rs:3018
+#: src/window.rs:3026
 msgid "Move To"
 msgstr ""
 
-#: src/window.rs:3021 src/window/menus.rs:46 src/window/menus.rs:176
+#: src/window.rs:3029 src/window/menus.rs:46 src/window/menus.rs:176
 #: src/window/menus.rs:198
 msgid "_Copy"
 msgstr ""
 
-#: src/window.rs:3021
+#: src/window.rs:3029
 msgid "_Move"
 msgstr ""
 
-#: src/window.rs:3024
+#: src/window.rs:3032
 msgid "C_heck the copies"
 msgstr ""
 
-#: src/window.rs:3026
+#: src/window.rs:3034
 msgid ""
 "Each file moved to another drive is read back from there and compared with "
 "its original (CRC32), which is deleted only once they match. A move within "
 "one drive copies nothing, so there’s nothing to check."
 msgstr ""
 
-#: src/window.rs:3028
+#: src/window.rs:3036
 msgid ""
 "Each copy is read back from where it went and compared with its original "
 "(CRC32). It takes about as long again as the copy."
 msgstr ""
 
-#: src/window.rs:3064
+#: src/window.rs:3072
 #, rust-format
 msgid "“{name}” can’t be moved to the Trash. Delete it permanently?"
 msgstr ""
 
-#: src/window.rs:3066
+#: src/window.rs:3074
 #, rust-format
 msgid "This item can’t be moved to the Trash. Delete it permanently?"
 msgid_plural ""
@@ -2906,39 +2915,39 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/window.rs:3068
+#: src/window.rs:3076
 msgid ""
 "This location has no trash. If you delete an item, it will be permanently "
 "lost."
 msgstr ""
 
-#: src/window.rs:3068 src/window.rs:3102 src/window/menus.rs:50
+#: src/window.rs:3076 src/window.rs:3110 src/window/menus.rs:50
 #: src/window/menus.rs:211
 msgid "_Delete"
 msgstr ""
 
-#: src/window.rs:3076
+#: src/window.rs:3084
 #, rust-format
 msgid "Move “{name}” to the Trash?"
 msgstr ""
 
-#: src/window.rs:3078
+#: src/window.rs:3086
 #, rust-format
 msgid "Move {n} item to the Trash?"
 msgid_plural "Move {n} items to the Trash?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/window.rs:3080
+#: src/window.rs:3088
 msgid "Move to _Trash"
 msgstr ""
 
-#: src/window.rs:3094
+#: src/window.rs:3102
 #, rust-format
 msgid "Are you sure you want to permanently delete “{name}”?"
 msgstr ""
 
-#: src/window.rs:3097
+#: src/window.rs:3105
 #, rust-format
 msgid "Are you sure you want to permanently delete the {n} selected item?"
 msgid_plural ""
@@ -2946,142 +2955,142 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/window.rs:3102
+#: src/window.rs:3110
 msgid "If you delete an item, it will be permanently lost."
 msgstr ""
 
-#: src/window.rs:3126
+#: src/window.rs:3134
 msgid "Empty all items from the Trash?"
 msgstr ""
 
-#: src/window.rs:3127
+#: src/window.rs:3135
 msgid "All items in the Trash will be permanently deleted."
 msgstr ""
 
-#: src/window.rs:3172
+#: src/window.rs:3180
 msgid "_Move Here"
 msgstr ""
 
-#: src/window.rs:3173
+#: src/window.rs:3181
 msgid "_Copy Here"
 msgstr ""
 
-#: src/window.rs:3174
+#: src/window.rs:3182
 msgid "_Link Here"
 msgstr ""
 
-#: src/window.rs:3175
+#: src/window.rs:3183
 msgid "Move and C_heck Here"
 msgstr ""
 
-#: src/window.rs:3176
+#: src/window.rs:3184
 msgid "Copy and Ch_eck Here"
 msgstr ""
 
-#: src/window.rs:3220
+#: src/window.rs:3228
 msgid "Install mate-terminal or set $TERMINAL."
 msgstr ""
 
-#: src/window.rs:3220
+#: src/window.rs:3228
 msgid "No terminal found"
 msgstr ""
 
-#: src/window.rs:3230
+#: src/window.rs:3238
 msgid "Could not open a terminal"
 msgstr ""
 
-#: src/window.rs:3251
+#: src/window.rs:3259
 msgid "Could not start the archive manager"
 msgstr ""
 
-#: src/window.rs:3257
+#: src/window.rs:3265
 msgid "Select Items Matching"
 msgstr ""
 
-#: src/window.rs:3260
+#: src/window.rs:3268
 msgid "_Select"
 msgstr ""
 
-#: src/window.rs:3266
+#: src/window.rs:3274
 msgid "Pattern (e.g. *.jpg, report-??.pdf):"
 msgstr ""
 
-#: src/window.rs:3291
+#: src/window.rs:3299
 msgid "Edit Bookmarks"
 msgstr ""
 
-#: src/window.rs:3329
+#: src/window.rs:3337
 msgid "A fast graphical file manager."
 msgstr ""
 
-#: src/window.rs:3329
+#: src/window.rs:3337
 msgid "This program comes with absolutely no warranty."
 msgstr ""
 
-#: src/window.rs:3336
+#: src/window.rs:3344
 msgid "_License"
 msgstr ""
 
-#: src/window.rs:3336
+#: src/window.rs:3344
 msgid "_Source Code"
 msgstr ""
 
-#: src/window.rs:3383
+#: src/window.rs:3391
 msgid "Could not open the manual"
 msgstr ""
 
-#: src/window.rs:3397
+#: src/window.rs:3405
 msgid "The manual isn’t installed"
 msgstr ""
 
-#: src/window.rs:3399
+#: src/window.rs:3407
 #, rust-format
 msgid ""
 "It wasn’t found in:\n"
 "{places}"
 msgstr ""
 
-#: src/window.rs:3400
+#: src/window.rs:3408
 msgid "You can read this version’s manual online instead."
 msgstr ""
 
-#: src/window.rs:3402
+#: src/window.rs:3410
 msgid "Read It _Online"
 msgstr ""
 
-#: src/window.rs:3416 src/window/prefs.rs:833
+#: src/window.rs:3424 src/window/prefs.rs:833
 msgid "Keyboard Shortcuts"
 msgstr ""
 
-#: src/window.rs:3452
+#: src/window.rs:3460
 msgid "Mouse"
 msgstr ""
 
-#: src/window.rs:3453
+#: src/window.rs:3461
 msgid "Middle-click a folder"
 msgstr ""
 
-#: src/window.rs:3454
+#: src/window.rs:3462
 msgid "Copy / Move / Ask"
 msgstr ""
 
-#: src/window.rs:3454
+#: src/window.rs:3462
 msgid "Drag with Ctrl / Shift / Alt"
 msgstr ""
 
-#: src/window.rs:3455
+#: src/window.rs:3463
 msgid "Ctrl+scroll"
 msgstr ""
 
-#: src/window.rs:3455 src/window/prefs.rs:164
+#: src/window.rs:3463 src/window/prefs.rs:164
 msgid "Zoom"
 msgstr ""
 
-#: src/window.rs:3456
+#: src/window.rs:3464
 msgid "Back / Forward"
 msgstr ""
 
-#: src/window.rs:3456
+#: src/window.rs:3464
 msgid "Back / forward mouse buttons"
 msgstr ""
 

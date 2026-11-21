@@ -19,7 +19,7 @@ Ziehen Sie Objekte in einen anderen Ordner, auf einen Ordner, einen Reiter, eine
 | <kbd>Strg</kbd> | Kopieren |
 | <kbd>Alt</kbd> | Beim Ablegen aus einem Menü wählen: Hierher verschieben, Hierher kopieren, Hierher verknüpfen, Hierher verschieben und prüfen, Hierher kopieren und prüfen |
 
-Dateien, die Sie aus einer Archivverwaltung ziehen (Engrampa, Xarchiver, ältere File-Roller-Versionen), werden dort entpackt, wo Sie sie ablegen. Das braucht X11; unter Wayland können die Archivverwaltungen das nicht.
+Dateien, die Sie aus einer Archivverwaltung ziehen, werden dort entpackt, wo Sie sie ablegen: aus Ark von KDE unter X11 und Wayland gleichermaßen, aus Engrampa, Xarchiver und älteren File-Roller-Versionen unter X11. Für diese unter Wayland siehe [Fragen und Probleme](troubleshooting.md#etwas-fehlt-oder-funktioniert-nicht).
 
 ### Fortschritt
 

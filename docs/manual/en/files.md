@@ -19,7 +19,7 @@ Drag items to another folder, onto a folder, a tab, a button of the path bar or 
 | <kbd>Ctrl</kbd> | Copy |
 | <kbd>Alt</kbd> | Choose from a menu when you drop: Move Here, Copy Here, Link Here, Move and Check Here, Copy and Check Here |
 
-Files dragged out of an archive manager (Engrampa, Xarchiver, older File Roller) are extracted where you drop them. This needs X11; on Wayland the archive managers can't do it.
+Files dragged out of an archive manager are extracted where you drop them: out of KDE's Ark on X11 and Wayland alike, out of Engrampa, Xarchiver and older File Roller versions on X11. For those on Wayland, see [Questions and problems](troubleshooting.md#something-is-missing-or-doesnt-work).
 
 ### Progress
 

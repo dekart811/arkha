@@ -311,7 +311,7 @@ pub fn targets() -> Vec<gtk::TargetEntry> {
 /// What can be dropped on folders: files, and files dragged out of an
 /// archive manager (see xds), in that order of preference.
 pub fn drop_targets() -> Vec<gtk::TargetEntry> {
-    targets().into_iter().chain(crate::xds::target_entry()).collect()
+    targets().into_iter().chain(crate::xds::target_entry()).chain(crate::arkdnd::target_entries()).collect()
 }
 
 pub fn dnd_actions() -> gdk::DragAction {

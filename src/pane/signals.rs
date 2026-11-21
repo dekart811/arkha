@@ -568,17 +568,25 @@ impl Pane {
             {
                 let w = w.clone();
                 view.connect_drag_drop(move |view, ctx, x, y, time| {
+                    // Out of an archive, where the files go (not search results).
+                    let dest = || {
+                        w.upgrade().and_then(|p| match p.drop_target(x, y) {
+                            Some((_, uri)) => Some(gio::File::for_uri(&uri)),
+                            None => (!p.is_searching()).then(|| p.current()),
+                        })
+                    };
                     match view.drag_dest_find_target(ctx, None) {
                         // Out of an archive: the archive manager saves the files.
                         Some(t) if crate::xds::is(&t) => {
-                            let dest = w.upgrade().and_then(|p| match p.drop_target(x, y) {
-                                Some((_, uri)) => Some(gio::File::for_uri(&uri)),
-                                None => (!p.is_searching()).then(|| p.current()),
-                            });
-                            if !dest.is_some_and(|d| crate::xds::start(view, ctx, &d, time)) {
+                            if !dest().is_some_and(|d| crate::xds::start(view, ctx, &d, time)) {
                                 ctx.drag_finish(false, false, time);
                             }
                         }
+                        // Out of Ark: Ark extracts them.
+                        Some(t) if crate::arkdnd::is(&t) => match dest() {
+                            Some(d) => crate::arkdnd::start(view, ctx, &d, time),
+                            None => ctx.drag_finish(false, false, time),
+                        },
                         Some(t) => view.drag_get_data(ctx, &t, time),
                         None => ctx.drag_finish(false, false, time),
                     }
@@ -592,6 +600,12 @@ impl Pane {
                     view.stop_signal_emission_by_name("drag-data-received");
                     if crate::xds::is(&sel.target()) {
                         crate::xds::finish(ctx, sel, time);
+                        if let Some(p) = w.upgrade() {
+                            p.highlight_drop(None);
+                        }
+                        return;
+                    }
+                    if crate::arkdnd::received(view, ctx, sel, time) {
                         if let Some(p) = w.upgrade() {
                             p.highlight_drop(None);
                         }

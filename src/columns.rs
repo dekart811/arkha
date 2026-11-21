@@ -264,6 +264,11 @@ impl Column {
                         ctx.drag_finish(false, false, time);
                     }
                 }
+                // Out of Ark: Ark extracts them.
+                Some(t) if crate::arkdnd::is(&t) => match w.upgrade() {
+                    Some(c) => crate::arkdnd::start(v, ctx, &c.drop_target(x, y).0, time),
+                    None => ctx.drag_finish(false, false, time),
+                },
                 Some(t) => v.drag_get_data(ctx, &t, time),
                 None => ctx.drag_finish(false, false, time),
             }
@@ -274,6 +279,9 @@ impl Column {
             v.set_drag_dest_row(None, gtk::TreeViewDropPosition::IntoOrBefore);
             if crate::xds::is(&sel.target()) {
                 crate::xds::finish(ctx, sel, time);
+                return;
+            }
+            if crate::arkdnd::received(v, ctx, sel, time) {
                 return;
             }
             let Some(c) = w.upgrade() else { return };

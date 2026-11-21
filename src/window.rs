@@ -2476,6 +2476,11 @@ impl AppWindow {
                         }
                         true
                     }
+                    // Out of Ark: Ark extracts them.
+                    Some(t) if crate::arkdnd::is(&t) => {
+                        crate::arkdnd::start(b, ctx, &target, time);
+                        true
+                    }
                     Some(t) => {
                         b.drag_get_data(ctx, &t, time);
                         true
@@ -2488,9 +2493,12 @@ impl AppWindow {
             {
                 let w = Rc::downgrade(self);
                 let target = c.clone();
-                b.connect_drag_data_received(move |_, ctx, _, _, sel, _, time| {
+                b.connect_drag_data_received(move |b, ctx, _, _, sel, _, time| {
                     if crate::xds::is(&sel.target()) {
                         crate::xds::finish(ctx, sel, time);
+                        return;
+                    }
+                    if crate::arkdnd::received(b, ctx, sel, time) {
                         return;
                     }
                     let uris: Vec<String> = sel.uris().iter().map(|u| u.to_string()).collect();

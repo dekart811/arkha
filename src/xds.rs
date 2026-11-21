@@ -1,11 +1,13 @@
 //! Files dragged out of an archive manager (Engrampa, Xarchiver, File
-//! Roller before GTK 4; File Roller 43 and later can't drag files out). They aren't files yet, so the archive manager offers the X
-//! Direct Save protocol (XDS) instead of a list of files: the drop target
-//! writes where they should go into a property of the source's window and
-//! asks for the data, and the source then extracts them there itself and
-//! answers "S" (saved), "E" (error) or "F" (take the data instead, which
-//! archive managers don't offer). X11 only: the property is an X window
-//! property.
+//! Roller before 44; File Roller 44 and later can't drag files out; KDE's
+//! Ark has a way of its own, see arkdnd.rs). They aren't files yet, so the
+//! archive manager offers the X Direct Save protocol (XDS) instead of a
+//! list of files: the drop target writes where they should go into a
+//! property of the source's window and asks for the data, and the source
+//! then extracts them there itself and answers "S" (saved), "E" (error) or
+//! "F" (take the data instead, which archive managers don't offer). X11
+//! only: the property is an X window property (on Wayland, both programs
+//! can run through XWayland).
 
 use gtk::prelude::*;
 
