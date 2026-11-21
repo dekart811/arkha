@@ -568,11 +568,16 @@ impl QueryEditor {
                 let c = changed.clone();
                 chooser.connect_current_folder_changed(move |_| c());
                 bx.pack_start(&chooser, false, false, 0);
-                // Unticked, only what the folder itself holds.
+                // Unticked, only what the folder itself holds. Searched
+                // again at once, without Reload (unlike the other rows,
+                // which are typed or picked bit by bit).
                 let sub = gtk::CheckButton::with_label(&tr("include subfolders"));
                 sub.set_active(*subfolders);
-                sub.set_tooltip_text(Some(&tr("Also search the folders in this one, and theirs. Reload searches again.")));
-                sub.connect_toggled(move |_| changed());
+                sub.set_tooltip_text(Some(&tr("Also search the folders in this one, and theirs")));
+                sub.connect_toggled(move |_| {
+                    changed();
+                    reload();
+                });
                 bx.pack_start(&sub, false, false, 0);
                 (bx.upcast(), false)
             }

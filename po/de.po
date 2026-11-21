@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Arkha 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-21 17:26+0100\n"
+"POT-Creation-Date: 2026-11-21 17:43+0100\n"
 "PO-Revision-Date: 2026-11-12 21:59+0100\n"
 "Last-Translator: \n"
 "Language-Team: German\n"
@@ -316,7 +316,7 @@ msgstr "_Aushängen"
 msgid "_Cancel"
 msgstr "_Abbrechen"
 
-#: src/autorun.rs:349 src/search.rs:729
+#: src/autorun.rs:349 src/search.rs:734
 msgid "_OK"
 msgstr "_OK"
 
@@ -1915,7 +1915,7 @@ msgid_plural "{n} other items selected"
 msgstr[0] "{n} weiteres Objekt ausgewählt"
 msgstr[1] "{n} weitere Objekte ausgewählt"
 
-#: src/pane/build.rs:112 src/search.rs:740 src/window/prefs.rs:1425
+#: src/pane/build.rs:112 src/search.rs:745 src/window/prefs.rs:1425
 #: src/window/prefs.rs:1733 src/window/prefs.rs:1952
 msgid "Name"
 msgstr "Name"
@@ -2426,31 +2426,31 @@ msgstr "Dieses Kriterium aus der Suche entfernen"
 msgid "Select folder to search in"
 msgstr "Ordner zum Durchsuchen wählen"
 
-#: src/search.rs:572
+#: src/search.rs:574
 msgid "include subfolders"
 msgstr "Unterordner einbeziehen"
 
-#: src/search.rs:574
-msgid "Also search the folders in this one, and theirs. Reload searches again."
-msgstr "Auch in den Ordnern darin suchen, und in deren Ordnern. Neu laden sucht erneut."
+#: src/search.rs:576
+msgid "Also search the folders in this one, and theirs"
+msgstr "Auch in den Ordnern darin suchen, und in deren Ordnern"
 
-#: src/search.rs:584
+#: src/search.rs:589
 msgid "Tags separated by spaces. Matches files that contain ALL the tags."
 msgstr "Schlagwörter, durch Leerzeichen getrennt. Findet Dateien, die ALLE Schlagwörter enthalten."
 
-#: src/search.rs:586
+#: src/search.rs:591
 msgid "Matches files that contain the text."
 msgstr "Findet Dateien, die den Text enthalten."
 
-#: src/search.rs:630
+#: src/search.rs:635
 msgid "Any"
 msgstr "Beliebig"
 
-#: src/search.rs:636
+#: src/search.rs:641
 msgid "Other Type…"
 msgstr "Anderer Typ …"
 
-#: src/search.rs:725
+#: src/search.rs:730
 msgid "Select type"
 msgstr "Typ wählen"
 

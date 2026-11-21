@@ -24,7 +24,7 @@ Drücken Sie <kbd>Strg</kbd>+<kbd>F</kbd> (**Gehe zu → Filter …** oder der K
 
 ### Nur diesen Ordner
 
-Um nur die Objekte des Ordners selbst zu durchsuchen, nicht die Ordner darin, nehmen Sie in der Zeile Ort über den Ergebnissen den Haken bei **Unterordner einbeziehen** weg und drücken Sie **Neu laden**. Ordner, deren Namen passen, werden weiter gefunden; was in ihnen liegt, nicht.
+Um nur die Objekte des Ordners selbst zu durchsuchen, nicht die Ordner darin, nehmen Sie in der Zeile Ort über den Ergebnissen den Haken bei **Unterordner einbeziehen** weg: Die Suche läuft sofort erneut. Ordner, deren Namen passen, werden weiter gefunden; was in ihnen liegt, nicht.
 
 Ob eine neue Suche mit angehaktem **Unterordner einbeziehen** beginnt, stellen Sie unter **Einstellungen → Verhalten → Unterordner einbeziehen** ein. Am Anfang ist es eingeschaltet.
 

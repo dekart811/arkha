@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Arkha 1.3.0-dev\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-21 17:26+0100\n"
+"POT-Creation-Date: 2026-11-21 17:43+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -321,7 +321,7 @@ msgstr ""
 msgid "_Cancel"
 msgstr ""
 
-#: src/autorun.rs:349 src/search.rs:729
+#: src/autorun.rs:349 src/search.rs:734
 msgid "_OK"
 msgstr ""
 
@@ -1929,7 +1929,7 @@ msgid_plural "{n} other items selected"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/pane/build.rs:112 src/search.rs:740 src/window/prefs.rs:1425
+#: src/pane/build.rs:112 src/search.rs:745 src/window/prefs.rs:1425
 #: src/window/prefs.rs:1733 src/window/prefs.rs:1952
 msgid "Name"
 msgstr ""
@@ -2451,31 +2451,31 @@ msgstr ""
 msgid "Select folder to search in"
 msgstr ""
 
-#: src/search.rs:572
+#: src/search.rs:574
 msgid "include subfolders"
 msgstr ""
 
-#: src/search.rs:574
-msgid "Also search the folders in this one, and theirs. Reload searches again."
+#: src/search.rs:576
+msgid "Also search the folders in this one, and theirs"
 msgstr ""
 
-#: src/search.rs:584
+#: src/search.rs:589
 msgid "Tags separated by spaces. Matches files that contain ALL the tags."
 msgstr ""
 
-#: src/search.rs:586
+#: src/search.rs:591
 msgid "Matches files that contain the text."
 msgstr ""
 
-#: src/search.rs:630
+#: src/search.rs:635
 msgid "Any"
 msgstr ""
 
-#: src/search.rs:636
+#: src/search.rs:641
 msgid "Other Type…"
 msgstr ""
 
-#: src/search.rs:725
+#: src/search.rs:730
 msgid "Select type"
 msgstr ""
 

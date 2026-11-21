@@ -1,8 +1,9 @@
 #!/bin/bash
 # search-subfolders.sh x11|wayland: "include subfolders" in the search's
 # Location row. Ticked (the default), a search looks in the folders inside
-# the one searched too; unticked and searched again (Reload), only in the
-# folder itself: a folder whose name matches is found, what's in it isn't.
+# the one searched too; unticked (searched again at once, no Reload), only
+# in the folder itself: a folder whose name matches is found, what's in it
+# isn't.
 # With Preferences → Behavior → "Include subfolders" off, a new
 # search starts unticked; the Preferences box writes that setting.
 GT_A11Y=1 GT_CONF='default_view=list'
@@ -20,7 +21,7 @@ gt_arkha "$D"
 gt_key ctrl+f; gt_type invoice; gt_key Return; sleep 2
 gt_check "ticked (the default): the subfolders too" "$(results)" "$ALL"
 gt_ok "untick include subfolders" gt_a11y press-in "*" "include subfolders"
-gt_ok "Reload" gt_a11y press-in "*" "Reload"; sleep 2
+sleep 2
 gt_shot only-here
 gt_check "unticked: only the folder itself" "$(results)" "$HERE"
 gt_quit
@@ -31,7 +32,7 @@ gt_arkha "$D"
 gt_key ctrl+f; gt_type invoice; gt_key Return; sleep 2
 gt_check "setting off: a new search only in the folder" "$(results)" "$HERE"
 gt_ok "tick include subfolders" gt_a11y press-in "*" "include subfolders"
-gt_ok "Reload" gt_a11y press-in "*" "Reload"; sleep 2
+sleep 2
 gt_check "ticked again: the subfolders too" "$(results)" "$ALL"
 
 # The Preferences box: ticked (from the file), pressed, saved as on.

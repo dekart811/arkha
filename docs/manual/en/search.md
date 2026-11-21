@@ -24,7 +24,7 @@ Above the results, as in Caja, you can narrow the search down. The **+** button 
 
 ### Only this folder
 
-To search only the items of the folder itself, not the folders in it, untick **include subfolders** in the Location row above the results and press **Reload**. Folders whose names match are still found; what's inside them isn't.
+To search only the items of the folder itself, not the folders in it, untick **include subfolders** in the Location row above the results: the search runs again at once. Folders whose names match are still found; what's inside them isn't.
 
 Whether a new search starts with **include subfolders** ticked is set in **Preferences → Behavior → Include subfolders**. It's on to begin with.
 

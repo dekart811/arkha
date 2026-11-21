@@ -26,7 +26,7 @@ impl Pane {
         }
         let w = Rc::downgrade(self);
         // The query editor's rows are kept with the search; Reload (or Enter
-        // in a row) searches again.
+        // in a row, or the subfolders box) searches again.
         {
             let w1 = w.clone();
             self.query_editor.connect_changed(move |criteria| {
