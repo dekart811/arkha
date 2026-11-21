@@ -3590,7 +3590,9 @@ mod tests {
         assert_eq!(at("folder", &there_uri, ""), there_uri);
         assert_eq!(at("folder", "", ""), here.uri(), "no folder chosen: the same as the pane in use");
         assert_eq!(at("last", "", &gone), here.uri(), "a local folder that's gone");
-        assert_eq!(at("folder", "smb://nas/share", ""), "smb://nas/share/", "a network place isn't looked up first");
+        // (As GIO spells it: with GVfs "smb://nas/share/", without it as given.)
+        let share = gio::File::for_uri("smb://nas/share").uri().to_string();
+        assert_eq!(at("folder", "smb://nas/share", ""), share, "a network place isn't looked up first");
         assert_eq!(at("nonsense", &there_uri, ""), here.uri());
     }
 
