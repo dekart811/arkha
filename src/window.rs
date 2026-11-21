@@ -389,11 +389,12 @@ pub struct AppWindow {
 /// Preferences (`opens`, see Settings::tab_opens and split_opens): the
 /// folder of the tab or pane in use (`here`), home, where the one closed
 /// last was (`last`) or the chosen `folder`; `here` when those aren't set,
-/// or a local one is gone.
+/// or a local one isn't a folder (any more).
 fn opens_at(opens: &str, here: &gio::File, folder: &str, last: &str) -> gio::File {
     let usable = |uri: &str| {
         let f = gio::File::for_uri(uri);
-        (!uri.is_empty() && (!f.is_native() || f.query_exists(gio::Cancellable::NONE))).then_some(f)
+        let folder = || f.query_file_type(gio::FileQueryInfoFlags::NONE, gio::Cancellable::NONE) == gio::FileType::Directory;
+        (!uri.is_empty() && (!f.is_native() || folder())).then_some(f)
     };
     match opens {
         "home" => util::home_file(),
@@ -1922,7 +1923,7 @@ impl AppWindow {
                 let shown = closing.nth_page(closing.current_page()).and_then(|page| {
                     self.panes.borrow().iter().find(|p| p.root.upcast_ref::<gtk::Widget>() == &page).map(|p| p.current().uri().to_string())
                 });
-                if let Some(uri) = shown {
+                if let Some(uri) = shown.filter(|u| config::with(|s| s.split_last != *u)) {
                     config::update(|s| s.split_last = uri);
                 }
                 self.moving_tabs.set(true);
@@ -2111,9 +2112,12 @@ impl AppWindow {
         let nb = notebook_of(pane.root.upcast_ref()).unwrap_or_else(|| self.notebook.clone());
         if let Some(n) = nb.page_num(&pane.root) {
             let (back, fwd) = pane.history();
-            // For New Tab's "the folder of the last closed tab".
+            // For New Tab's "the folder of the last closed tab" (saved only
+            // when it's another).
             let uri = pane.current().uri().to_string();
-            config::update(|s| s.tab_last = uri);
+            if config::with(|s| s.tab_last != uri) {
+                config::update(|s| s.tab_last = uri);
+            }
             let mut closed = self.closed_tabs.borrow_mut();
             closed.push(ClosedTab { place: pane.place(), back, fwd, position: n });
             if closed.len() > MAX_CLOSED_TABS {
@@ -2492,7 +2496,7 @@ impl AppWindow {
                     if b.drag_dest_find_target(ctx, None).is_none() {
                         return false;
                     }
-                    ctx.drag_status(crate::pane::choose_action(b.upcast_ref(), ctx, &target), time);
+                    ctx.drag_status(crate::arkdnd::action(b, ctx, crate::pane::choose_action(b.upcast_ref(), ctx, &target)), time);
                     b.drag_highlight();
                     true
                 });
@@ -3278,9 +3282,11 @@ impl AppWindow {
         if paths.is_empty() {
             return;
         }
-        let argv = util::archive_argv(&tool, extract, paths);
-        if let Err(e) = util::spawn_in_dir(&argv, p.current().path().as_deref()) {
-            util::error_dialog(Some(self.window.upcast_ref()), &tr("Could not start the archive manager"), &e);
+        for argv in util::archive_runs(&tool, extract, paths) {
+            if let Err(e) = util::spawn_in_dir(&argv, p.current().path().as_deref()) {
+                util::error_dialog(Some(self.window.upcast_ref()), &tr("Could not start the archive manager"), &e);
+                break;
+            }
         }
     }
 
@@ -3400,8 +3406,9 @@ impl AppWindow {
         d.show();
     }
 
-    /// Help → Manual: its first page in the web browser (the default
-    /// application for HTML files).
+    /// Help → Manual: its first page in the web browser (the application
+    /// for web links; else the one for HTML files, which on some systems is
+    /// an editor, showing the page's source).
     fn manual(&self) {
         let window = self.window.upcast_ref::<gtk::Window>();
         // Not gtk::show_uri_on_window: on Wayland it hands the window to a
@@ -3411,7 +3418,11 @@ impl AppWindow {
             if let Some(c) = &ctx {
                 c.set_timestamp(gtk::current_event_time());
             }
-            if let Err(e) = gio::AppInfo::launch_default_for_uri(uri, ctx.as_ref()) {
+            // (The one for HTML files also when the browser won't start.)
+            let result = gio::AppInfo::default_for_uri_scheme("https")
+                .map_or_else(|| Err(glib::Error::new(gio::IOErrorEnum::NotFound, "")), |b| b.launch_uris(&[uri], ctx.as_ref()))
+                .or_else(|_| gio::AppInfo::launch_default_for_uri(uri, ctx.as_ref()));
+            if let Err(e) = result {
                 util::error_dialog(Some(window), &tr("Could not open the manual"), e.message());
             }
         };
@@ -3590,6 +3601,9 @@ mod tests {
         assert_eq!(at("folder", &there_uri, ""), there_uri);
         assert_eq!(at("folder", "", ""), here.uri(), "no folder chosen: the same as the pane in use");
         assert_eq!(at("last", "", &gone), here.uri(), "a local folder that's gone");
+        std::fs::write(t.0.join("file"), "").unwrap();
+        let file = gio::File::for_path(t.0.join("file")).uri().to_string();
+        assert_eq!(at("folder", &file, ""), here.uri(), "a file, not a folder");
         // (As GIO spells it: with GVfs "smb://nas/share/", without it as given.)
         let share = gio::File::for_uri("smb://nas/share").uri().to_string();
         assert_eq!(at("folder", "smb://nas/share", ""), share, "a network place isn't looked up first");

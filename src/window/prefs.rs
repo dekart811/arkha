@@ -1040,17 +1040,16 @@ fn opens_choice(
         config::update(|s| set_folder(s, start.clone()));
     }
     chooser.set_sensitive(opens == "folder");
-    // Stored as the button shows it: a folder from its list (Home, File
-    // System, …) only says selection-changed, one from its dialog file-set
-    // too (current-folder-changed comes for neither); selection-changed
-    // also comes once it's set up, so a folder shown is never one unstored.
-    let store = move |c: &gtk::FileChooserButton| {
+    // Stored when one is picked: file-set comes for a folder from the
+    // button's list (Home, File System, …) and from its dialog, and only
+    // then (current-folder-changed comes for neither; selection-changed
+    // also while it's set up, when a network place not mounted, or a
+    // folder gone, shows as another one, which isn't the one chosen).
+    chooser.connect_file_set(move |c| {
         if let Some(uri) = c.uri().or_else(|| c.current_folder_uri()) {
             config::update(|s| set_folder(s, uri.to_string()));
         }
-    };
-    chooser.connect_selection_changed(store);
-    chooser.connect_file_set(store);
+    });
     {
         let chooser = chooser.clone();
         let picked = !folder.is_empty();

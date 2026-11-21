@@ -250,7 +250,7 @@ impl Column {
             }
             let (dest, row) = c.drop_target(x, y);
             v.set_drag_dest_row(row.as_ref(), gtk::TreeViewDropPosition::IntoOrBefore);
-            ctx.drag_status(crate::pane::choose_action(v.upcast_ref(), ctx, &dest), time);
+            ctx.drag_status(crate::arkdnd::action(v, ctx, crate::pane::choose_action(v.upcast_ref(), ctx, &dest)), time);
             true
         });
         v.connect_drag_leave(|v, _, _| v.set_drag_dest_row(None, gtk::TreeViewDropPosition::IntoOrBefore));

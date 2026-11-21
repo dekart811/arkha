@@ -552,7 +552,7 @@ impl Pane {
                             p.current()
                         }
                     };
-                    let a = choose_action(view, ctx, &dest);
+                    let a = crate::arkdnd::action(view, ctx, choose_action(view, ctx, &dest));
                     ctx.drag_status(a, time);
                     true
                 });

@@ -110,11 +110,19 @@ const CHOSEN: &str = "arkha-props-chosen";
 
 /// Items dropped into the window (on it or its note field): shown in it.
 fn show_dropped(dialog: &gtk::Dialog, data: &gtk::SelectionData) {
-    let files: Vec<gio::File> = data.uris().iter().map(|u| gio::File::for_uri(u)).collect();
+    let files: Vec<gio::File> = data.uris().iter().filter(|u| shows_properties(u)).map(|u| gio::File::for_uri(u)).collect();
     let Some(chosen) = (unsafe { dialog.data::<Rc<std::cell::RefCell<Option<String>>>>(CHOSEN) }).map(|c| unsafe { c.as_ref() }.clone()) else { return };
     if !files.is_empty() && !show_items(dialog, files, &chosen) {
         util::error_dialog(Some(dialog.upcast_ref()), &tr("Could not read properties"), &tr("The file may have been removed."));
     }
+}
+
+/// Whether a dropped link is for Properties: not a web page's (a link
+/// dragged out of a web browser), which has none, and looked up as a file
+/// would be a download while the window waits.
+fn shows_properties(uri: &str) -> bool {
+    let scheme = uri.split_once(':').map_or("", |(s, _)| s).to_ascii_lowercase();
+    scheme != "http" && scheme != "https"
 }
 
 /// The note field passes files dropped on it to the window, as the rest of
@@ -190,6 +198,8 @@ fn show_items(dialog: &gtk::Dialog, files: Vec<gio::File>, chosen: &Rc<std::cell
     let nb = gtk::Notebook::new();
     nb.set_border_width(6);
     dialog.content_area().pack_start(&nb, true, true, 0);
+    // Gone when other items are shown (see the metadata, below).
+    let shown_still = nb.downgrade();
 
     let img = gtk::Image::new();
     if let Some(pb) = icons::icon_pixbuf(icons::item_icon(&infos[0], &[]).as_ref(), 64) {
@@ -223,6 +233,11 @@ fn show_items(dialog: &gtk::Dialog, files: Vec<gio::File>, chosen: &Rc<std::cell
     {
         let (d, files, img, info, metas) = (dialog.clone(), files.clone(), img.clone(), infos[0].clone(), metas.clone());
         crate::metadata::read_items(files.iter().map(|f| f.uri().to_string()).collect(), move |found| {
+            // Read for items no longer shown (others dropped in meanwhile):
+            // their tabs are gone.
+            if shown_still.upgrade().is_none_or(|nb| nb.parent().is_none()) {
+                return;
+            }
             let found: Vec<Meta> = found.into_iter().map(|(_, m)| m).collect();
             replace_contents(&emblems_slot, &emblems_page(&d, &files, found.iter().map(|m| m.emblems.clone()).collect()));
             replace_contents(&notes_slot, &notes_page(&d, &files[0], &found.first().map(|m| m.note.clone()).unwrap_or_default()));
@@ -1527,6 +1542,16 @@ extern "C" {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn web_links_have_no_properties() {
+        use super::shows_properties;
+        assert!(shows_properties("file:///home/u/a.mp4"));
+        assert!(shows_properties("sftp://host/srv/a.txt"));
+        assert!(shows_properties("trash:///a"));
+        assert!(!shows_properties("https://example.org/a.html"));
+        assert!(!shows_properties("HTTP://example.org/"));
+    }
+
     #[test]
     fn digits_grouped_by_three() {
         for (n, want) in [(0, "0"), (999, "999"), (1000, "1,000"), (123456, "123,456"), (1234567, "1,234,567"), (u64::MAX, "18,446,744,073,709,551,615")] {

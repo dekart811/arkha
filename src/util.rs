@@ -625,6 +625,25 @@ fn choose_archiver(default: Option<&str>, desktop: &str, installed: impl Fn(&str
     order.into_iter().find(|a| installed(a))
 }
 
+/// The command lines for Extract Here (`extract`) or Compress with `tool`
+/// on `paths`: one, but for Ark's Extract Here one for each folder the
+/// archives are in (from search results, say): Ark extracts next to the
+/// first archive it's given (--autodestination), the others next to each.
+pub fn archive_runs(tool: &str, extract: bool, paths: Vec<std::ffi::OsString>) -> Vec<Vec<std::ffi::OsString>> {
+    if tool != "ark" || !extract {
+        return vec![archive_argv(tool, extract, paths)];
+    }
+    let mut groups: Vec<(Option<std::path::PathBuf>, Vec<std::ffi::OsString>)> = vec![];
+    for p in paths {
+        let parent = std::path::Path::new(&p).parent().map(|d| d.to_path_buf());
+        match groups.iter_mut().find(|(d, _)| *d == parent) {
+            Some((_, g)) => g.push(p),
+            None => groups.push((parent, vec![p])),
+        }
+    }
+    groups.into_iter().map(|(_, g)| archive_argv(tool, extract, g)).collect()
+}
+
 /// The command line for Extract Here (`extract`) or Compress with `tool`
 /// (as archiver_command found it) on `paths`.
 pub fn archive_argv(tool: &str, extract: bool, paths: Vec<std::ffi::OsString>) -> Vec<std::ffi::OsString> {
@@ -1104,6 +1123,17 @@ mod tests {
         assert_eq!(words("engrampa", true), ["engrampa", "--extract-here", "/a/b.zip"]);
         assert_eq!(words("xarchiver", false), ["xarchiver", "--compress", "/a/b.zip"]);
         assert_eq!(words("file-roller", false), ["file-roller", "--add", "/a/b.zip"]);
+        // Ark's Extract Here: once per folder, the archives in their order.
+        let runs = |tool: &str, extract: bool, paths: &[&str]| -> Vec<String> {
+            archive_runs(tool, extract, paths.iter().map(|p| p.into()).collect())
+                .into_iter()
+                .map(|r| r.into_iter().map(|w| w.to_string_lossy().into_owned()).collect::<Vec<_>>().join(" "))
+                .collect()
+        };
+        let three = ["/a/1.zip", "/b/2.zip", "/a/3.zip"];
+        assert_eq!(runs("ark", true, &three), ["ark --batch --autodestination --autosubfolder /a/1.zip /a/3.zip", "ark --batch --autodestination --autosubfolder /b/2.zip"]);
+        assert_eq!(runs("engrampa", true, &three), ["engrampa --extract-here /a/1.zip /b/2.zip /a/3.zip"], "the others extract each next to itself");
+        assert_eq!(runs("ark", false, &three).len(), 1, "Compress: one archive of them all");
     }
 
     #[test]

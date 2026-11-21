@@ -39,6 +39,16 @@ pub fn is(target: &gdk::Atom) -> bool {
     target.name() == SERVICE
 }
 
+/// The action to show while a drag is over `widget`: copy for one from Ark
+/// (it extracts, whatever the keys held: Shift's move or Ctrl+Shift's link
+/// mean nothing to it, and are better not passed on), else `other`.
+pub fn action(widget: &impl IsA<gtk::Widget>, ctx: &gdk::DragContext, other: gdk::DragAction) -> gdk::DragAction {
+    match widget.as_ref().drag_dest_find_target(ctx, None) {
+        Some(t) if is(&t) => gdk::DragAction::COPY,
+        _ => other,
+    }
+}
+
 /// On the drop: notes that the files go into `dest` and asks for Ark's
 /// connection name (handled by `received` in drag-data-received).
 pub fn start(widget: &impl IsA<gtk::Widget>, ctx: &gdk::DragContext, dest: &gio::File, time: u32) {

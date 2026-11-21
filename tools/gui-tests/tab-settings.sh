@@ -5,7 +5,10 @@
 # own; a folder opened in a new tab (Ctrl+Enter) is that folder whatever
 # the setting. The folder picked from the folder button's own list (File
 # System) is the one stored (it once stayed the one before: only folders
-# from its dialog were). The window's title is the current tab's folder.
+# from its dialog were); a network place that can't be reached stays the
+# one stored when Preferences opens (only a pick of one's own is stored,
+# not what the button shows). The window's title is the current tab's
+# folder.
 GT_A11Y=1 GT_CONF='default_view=list'
 . "$(dirname "$0")/lib.sh"
 gt_session "$@"
@@ -55,6 +58,17 @@ gt_click 240 $y; gt_key Down; sleep 0.5
 gt_shot behavior
 gt_check "Preferences offers it" "$(gt_a11y labels | grep -c '^New tabs open in:$')" "1"
 gt_quit
+
+# A network place that can't be reached: Preferences opened and closed,
+# it's still the one stored.
+set tab_opens folder; set tab_folder "smb://nowhere.invalid/share"
+gt_arkha "$HOME/A"
+gdbus call --session --dest $APP_ID --object-path $APP_PATH/window/1 \
+  --method org.gtk.Actions.Activate preferences [] {} >/dev/null & sleep 2
+gt_click 240 $y; gt_key Down; sleep 2
+gt_key Escape; sleep 0.5
+gt_quit
+gt_check "opening Preferences keeps a network place stored" "$(grep '^tab_folder=' "$CONF")" "tab_folder=smb://nowhere.invalid/share"
 
 # "This folder:", File System picked from the button's list.
 set tab_opens folder; set tab_folder "file://$HOME/C"
