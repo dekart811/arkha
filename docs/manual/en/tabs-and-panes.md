@@ -29,7 +29,7 @@ Split view shows two folders side by side, each with its own tabs: handy for cop
 <img src="../../screenshots/split-light.png" alt="Split view: a home folder in the icon view and a music album in the list view, each pane with two tabs">
 </picture>
 
-- **View → Extra Pane** (<kbd>F3</kbd>) opens and closes the second pane.
+- **View → Extra Pane** (<kbd>F3</kbd>) opens and closes the second pane. It opens in the same folder as the pane you're in; when it closes, the pane you're in stays and the other one closes with its tabs. Both can be changed in **Preferences → Behavior → Split View**: keep the other pane instead, and open the extra pane in your home folder, in the folder it showed when last closed, or in a folder of your choice.
 - The menus and toolbar act on the pane you last clicked. <kbd>F6</kbd> switches to the other pane.
 - **View → Swap Panes** (<kbd>Ctrl</kbd>+<kbd>U</kbd>) swaps the two sides, with all their tabs.
 - **View → Same Location as Other Pane** goes to the folder the other pane shows.

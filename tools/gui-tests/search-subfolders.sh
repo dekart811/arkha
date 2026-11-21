@@ -42,6 +42,9 @@ gdbus call --session --dest $APP_ID --object-path $APP_PATH/window/1 \
 # Its second page, Behavior (as prefs.sh finds the pages).
 y=180; [ "$BACKEND" = wayland ] && y=194
 gt_click 240 $y; gt_key Down; sleep 0.5
+# Scrolled down to the Search section (shown, accessibility has it), over
+# the labels on the left: a choice under the pointer would change.
+xdotool mousemove 380 450; for _ in $(seq 10); do xdotool click 5; done; sleep 0.5
 gt_shot prefs
 gt_ok "press Include subfolders" gt_a11y press "Include subfolders"; sleep 1
 gt_check "saved" "$(grep -c '^search_subfolders=true' "$XDG_CONFIG_HOME/arkha/arkha.conf")" "1"

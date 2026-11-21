@@ -13,7 +13,7 @@
 
 - **Opening:** single click to open items, instead of a double-click.
 - **Tabs:** where new tabs go.
-- **Split View:** let the pane under the mouse pointer take the keys and menus, after it rests there for a moment you set.
+- **Split View:** let the pane under the mouse pointer take the keys and menus, after it rests there for a moment you set; which pane stays when split view is turned off; and where the extra pane opens.
 - **File Operations:** show copies and moves in a window of their own, instead of the button in the location bar.
 - **Trash:** ask before moving files to the trash.
 - **Search:** whether a new search also looks in the subfolders (see [Searching and selecting](search.md#only-this-folder)).

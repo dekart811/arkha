@@ -44,8 +44,9 @@ gdbus call --session --dest $APP_ID --object-path $APP_PATH/window/1 \
   --method org.gtk.Actions.Activate preferences [] {} >/dev/null & sleep 2
 y=180; [ "$BACKEND" = wayland ] && y=194
 gt_click 240 $y; gt_key Down; sleep 0.5
-# Scrolled down to the Archives section, for the screenshot.
-xdotool mousemove 600 400 click 5 click 5 click 5 click 5; sleep 0.5
+# Scrolled down to the Archives section (shown, accessibility has it),
+# over the labels on the left: a choice under the pointer would change.
+xdotool mousemove 380 450; for _ in $(seq 10); do xdotool click 5; done; sleep 0.5
 gt_shot behavior
 gt_check "Preferences offers the choice" "$(gt_a11y labels | grep -c '^Archive manager:$')" "1"
 gt_end

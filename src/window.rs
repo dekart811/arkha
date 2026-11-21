@@ -385,6 +385,23 @@ pub struct AppWindow {
     _bookmark_monitor: RefCell<Option<gio::FileMonitor>>,
 }
 
+/// Where the extra pane of split view opens, by Preferences (`opens`, see
+/// Settings::split_opens): the folder of the pane in use (`here`), home,
+/// where the closed pane was (`last`) or the chosen `folder`; `here` when
+/// those aren't set, or a local one is gone.
+fn split_opens_at(opens: &str, here: &gio::File, folder: &str, last: &str) -> gio::File {
+    let usable = |uri: &str| {
+        let f = gio::File::for_uri(uri);
+        (!uri.is_empty() && (!f.is_native() || f.query_exists(gio::Cancellable::NONE))).then_some(f)
+    };
+    match opens {
+        "home" => util::home_file(),
+        "last" => usable(last).unwrap_or_else(|| here.clone()),
+        "folder" => usable(folder).unwrap_or_else(|| here.clone()),
+        _ => here.clone(),
+    }
+}
+
 impl AppWindow {
     pub fn new(app: &gtk::Application, locations: &[gio::File]) -> Rc<AppWindow> {
         Self::create(app, locations, true)
@@ -1884,7 +1901,9 @@ impl AppWindow {
     fn set_split(self: &Rc<Self>, on: bool) {
         if on != self.split_on() {
             if on {
-                let loc = self.current_pane().map(|p| p.current()).unwrap_or_else(util::home_file);
+                let here = self.current_pane().map(|p| p.current()).unwrap_or_else(util::home_file);
+                let (opens, folder, last) = config::with(|s| (s.split_opens.clone(), s.split_folder.clone(), s.split_last.clone()));
+                let loc = split_opens_at(&opens, &here, &folder, &last);
                 self.notebook2.show();
                 let width = self.split.allocated_width();
                 if width > 0 {
@@ -1893,9 +1912,17 @@ impl AppWindow {
                 self.set_active(&self.notebook2.clone());
                 self.add_tab(&loc, true);
             } else {
-                // Keep the pane that has focus and close the other one's tabs.
-                let keep_extra = self.active() == self.notebook2;
+                // Keep the pane in use (or, as set, the other one) and close
+                // the other one's tabs, noting the folder it showed.
+                let keep_active = config::with(|s| s.split_keep != "other");
+                let keep_extra = (self.active() == self.notebook2) == keep_active;
                 let closing = if keep_extra { self.notebook.clone() } else { self.notebook2.clone() };
+                let shown = closing.nth_page(closing.current_page()).and_then(|page| {
+                    self.panes.borrow().iter().find(|p| p.root.upcast_ref::<gtk::Widget>() == &page).map(|p| p.current().uri().to_string())
+                });
+                if let Some(uri) = shown {
+                    config::update(|s| s.split_last = uri);
+                }
                 self.moving_tabs.set(true);
                 while let Some(page) = closing.nth_page(Some(0)) {
                     let pane = self.panes.borrow().iter().find(|p| p.root.upcast_ref::<gtk::Widget>() == &page).cloned();
@@ -3543,6 +3570,24 @@ fn parse_location(text: &str, base: Option<gio::File>) -> gio::File {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn extra_pane_opens_where_preferences_say() {
+        let t = crate::testutil::TestDir::new("split-opens");
+        let (here, there) = (gio::File::for_path(t.0.join("here")), t.0.join("there"));
+        std::fs::create_dir_all(&there).unwrap();
+        let there_uri = gio::File::for_path(&there).uri().to_string();
+        let gone = gio::File::for_path(t.0.join("gone")).uri().to_string();
+        let at = |opens: &str, folder: &str, last: &str| split_opens_at(opens, &here, folder, last).uri().to_string();
+        assert_eq!(at("same", &there_uri, &there_uri), here.uri());
+        assert_eq!(at("home", "", ""), util::home_file().uri());
+        assert_eq!(at("last", "", &there_uri), there_uri);
+        assert_eq!(at("folder", &there_uri, ""), there_uri);
+        assert_eq!(at("folder", "", ""), here.uri(), "no folder chosen: the same as the pane in use");
+        assert_eq!(at("last", "", &gone), here.uri(), "a local folder that's gone");
+        assert_eq!(at("folder", "smb://nas/share", ""), "smb://nas/share/", "a network place isn't looked up first");
+        assert_eq!(at("nonsense", &there_uri, ""), here.uri());
+    }
 
     /// Tabs as a list of names: opens `name` from the current tab (or as a
     /// new tab), as AppWindow::insert_tab places it.

@@ -8,6 +8,14 @@
 //! client (a screen reader) reads the tree. Their classes' ref_state_set is
 //! wrapped here to give a defunct state instead; everything else is left to
 //! GTK.
+//!
+//! A notebook's tab (its page accessible) is worse off: removed (a tab
+//! closed, the extra pane of split view closed), it forgets its notebook,
+//! and asked for its state then, it passes the missing notebook to
+//! atk_selection_ref_selection and gtk_accessible_get_widget, for its state,
+//! name and index in its parent: failed assertions. Those three are wrapped
+//! to answer (defunct, no name, -1) without asking it once it has no parent
+//! (which GTK takes away on removal).
 
 use gtk::atk::ffi as atk;
 
@@ -25,6 +33,65 @@ unsafe extern "C" {
     fn gtk_entry_accessible_get_type() -> glib::ffi::GType;
     fn gtk_expander_accessible_get_type() -> glib::ffi::GType;
     fn gtk_check_menu_item_accessible_get_type() -> glib::ffi::GType;
+    fn gtk_notebook_page_accessible_get_type() -> glib::ffi::GType;
+}
+
+/// A state set saying the object is gone.
+unsafe fn defunct() -> *mut atk::AtkStateSet {
+    // SAFETY: plain ATK calls.
+    unsafe {
+        let set = atk::atk_state_set_new();
+        atk::atk_state_set_add_state(set, atk::ATK_STATE_DEFUNCT);
+        set
+    }
+}
+
+/// GTK's ref_state_set, get_name and get_index_in_parent of a notebook's tab.
+static TAB_ORIGINAL: std::sync::OnceLock<RefStateSet> = std::sync::OnceLock::new();
+type GetName = unsafe extern "C" fn(*mut atk::AtkObject) -> *const std::ffi::c_char;
+static TAB_NAME: std::sync::OnceLock<GetName> = std::sync::OnceLock::new();
+type GetIndex = unsafe extern "C" fn(*mut atk::AtkObject) -> std::ffi::c_int;
+static TAB_INDEX: std::sync::OnceLock<GetIndex> = std::sync::OnceLock::new();
+
+/// Whether a tab is removed: GTK took its parent (its notebook) away.
+unsafe fn tab_removed(obj: *mut atk::AtkObject) -> bool {
+    // SAFETY: an ATK object, from ATK.
+    unsafe { atk::atk_object_get_parent(obj).is_null() }
+}
+
+unsafe extern "C" fn tab_get_name(obj: *mut atk::AtkObject) -> *const std::ffi::c_char {
+    // SAFETY: as in tab_ref_state_set.
+    unsafe {
+        match TAB_NAME.get() {
+            Some(f) if !tab_removed(obj) => f(obj),
+            _ => std::ptr::null(),
+        }
+    }
+}
+
+unsafe extern "C" fn tab_get_index_in_parent(obj: *mut atk::AtkObject) -> std::ffi::c_int {
+    // SAFETY: as in tab_ref_state_set.
+    unsafe {
+        match TAB_INDEX.get() {
+            Some(f) if !tab_removed(obj) => f(obj),
+            _ => -1,
+        }
+    }
+}
+
+/// A tab's state: defunct once it's removed (no parent), without asking it.
+unsafe extern "C" fn tab_ref_state_set(obj: *mut atk::AtkObject) -> *mut atk::AtkStateSet {
+    // SAFETY: called by ATK with one of its tab objects, through the slot
+    // whose original function was kept before it was replaced.
+    unsafe {
+        if tab_removed(obj) {
+            return defunct();
+        }
+        match TAB_ORIGINAL.get() {
+            Some(f) => f(obj),
+            None => defunct(),
+        }
+    }
 }
 
 /// One for each class (a class's function may call its parent's, so each
@@ -37,9 +104,7 @@ unsafe extern "C" fn ref_state_set<const N: usize>(obj: *mut atk::AtkObject) -> 
         if !set.is_null() {
             return set;
         }
-        let set = atk::atk_state_set_new();
-        atk::atk_state_set_add_state(set, atk::ATK_STATE_DEFUNCT);
-        set
+        defunct()
     }
 }
 
@@ -83,6 +148,25 @@ pub fn fix_defunct_states() {
         let item = glib::gobject_ffi::g_type_from_name(c"GtkIconViewItemAccessible".as_ptr());
         if item != 0 {
             types.push(item);
+        }
+    }
+    // SAFETY: as for the others (it has no subclasses).
+    unsafe {
+        let class = glib::gobject_ffi::g_type_class_ref(gtk_notebook_page_accessible_get_type()) as *mut atk::AtkObjectClass;
+        if let Some(f) = (*class).ref_state_set {
+            if TAB_ORIGINAL.set(f).is_ok() {
+                (*class).ref_state_set = Some(tab_ref_state_set);
+            }
+        }
+        if let Some(f) = (*class).get_name {
+            if TAB_NAME.set(f).is_ok() {
+                (*class).get_name = Some(tab_get_name);
+            }
+        }
+        if let Some(f) = (*class).get_index_in_parent {
+            if TAB_INDEX.set(f).is_ok() {
+                (*class).get_index_in_parent = Some(tab_get_index_in_parent);
+            }
         }
     }
     for (n, ty) in types.into_iter().enumerate() {

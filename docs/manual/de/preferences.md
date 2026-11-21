@@ -13,7 +13,7 @@
 
 - **Öffnen:** Objekte mit einfachem Klick öffnen statt mit einem Doppelklick.
 - **Reiter:** wohin neue Reiter kommen.
-- **Geteilte Ansicht:** die Ansicht unter dem Mauszeiger die Tasten und Menüs übernehmen lassen, nachdem er einen einstellbaren Moment darauf geruht hat.
+- **Geteilte Ansicht:** die Ansicht unter dem Mauszeiger die Tasten und Menüs übernehmen lassen, nachdem er einen einstellbaren Moment darauf geruht hat; welche Ansicht beim Ausschalten der geteilten Ansicht bleibt; und wo sich die zusätzliche Ansicht öffnet.
 - **Dateivorgänge:** Kopien und Verschiebungen in einem eigenen Fenster zeigen statt mit dem Knopf in der Ortsleiste.
 - **Papierkorb:** vor dem Verschieben in den Papierkorb nachfragen.
 - **Suche:** ob eine neue Suche auch in den Unterordnern sucht (siehe [Suchen und Auswählen](search.md#nur-diesen-ordner)).

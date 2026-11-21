@@ -54,6 +54,17 @@ pub struct Settings {
     /// How long (ms) the pointer has to stay over a pane before it takes the
     /// focus: passing over it on the way elsewhere doesn't count.
     pub focus_follows_mouse_delay: i32,
+    /// Which pane stays when split view is turned off: "active" (the one
+    /// in use) or "other".
+    pub split_keep: String,
+    /// Where the extra pane opens: "same" (the folder of the pane in use),
+    /// "home", "last" (where the closed pane was, `split_last`) or
+    /// "folder" (`split_folder`).
+    pub split_opens: String,
+    /// The folder (a URI) for split_opens "folder".
+    pub split_folder: String,
+    /// The folder (a URI) the pane that closed with split view last showed.
+    pub split_last: String,
     /// New tabs go at the end of the tab bar (else right after the current one).
     /// Where new tabs go: "in-order" (as Firefox puts them), "after" (right
     /// after the current tab) or "end".
@@ -277,6 +288,10 @@ impl Default for Settings {
             archiver: String::new(),
             focus_follows_mouse: false,
             focus_follows_mouse_delay: 300,
+            split_keep: "active".into(),
+            split_opens: "same".into(),
+            split_folder: String::new(),
+            split_last: String::new(),
             new_tabs: "in-order".into(),
             show_zoom_buttons: true,
             show_view_buttons: true,
@@ -435,6 +450,10 @@ fn from_keyfile(kf: &glib::KeyFile) -> Settings {
     st!(archiver);
     b!(focus_follows_mouse);
     i!(focus_follows_mouse_delay);
+    st!(split_keep);
+    st!(split_opens);
+    st!(split_folder);
+    st!(split_last);
     st!(new_tabs);
     b!(show_zoom_buttons);
     b!(show_view_buttons);
@@ -665,6 +684,10 @@ fn to_keyfile(s: &Settings) -> glib::KeyFile {
     kf.set_string(g, "archiver", &s.archiver);
     kf.set_boolean(g, "focus_follows_mouse", s.focus_follows_mouse);
     kf.set_integer(g, "focus_follows_mouse_delay", s.focus_follows_mouse_delay);
+    kf.set_string(g, "split_keep", &s.split_keep);
+    kf.set_string(g, "split_opens", &s.split_opens);
+    kf.set_string(g, "split_folder", &s.split_folder);
+    kf.set_string(g, "split_last", &s.split_last);
     kf.set_string(g, "new_tabs", &s.new_tabs);
     kf.set_boolean(g, "show_zoom_buttons", s.show_zoom_buttons);
     kf.set_boolean(g, "show_view_buttons", s.show_view_buttons);

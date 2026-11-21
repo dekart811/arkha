@@ -331,6 +331,62 @@ impl AppWindow {
         ffm.bind_property("active", &delay, "sensitive").sync_create().build();
         let after = f.inline(&b, &tr("After the pointer rests on it for"), &[delay.upcast_ref(), gtk::Label::new(Some("ms")).upcast_ref()]);
         after.set_margin_start(after.margin_start() + 24);
+        // Which pane stays when split view is turned off.
+        let keep = gtk::ComboBoxText::new();
+        keep.append(Some("active"), &tr("The pane in use"));
+        keep.append(Some("other"), &tr("The other pane"));
+        if !keep.set_active_id(Some(&s.split_keep)) {
+            keep.set_active_id(Some("active"));
+        }
+        keep.connect_changed(|c| {
+            if let Some(id) = c.active_id() {
+                config::update(|s| s.split_keep = id.to_string());
+            }
+        });
+        f.option(&b, &tr("When closing split view, keep:"), keep.upcast_ref());
+        // Where the extra pane opens: a folder of one's own beside it.
+        let opens = gtk::ComboBoxText::new();
+        for (id, label) in [
+            ("same", tr("The same folder as the pane in use")),
+            ("home", tr("Your home folder")),
+            ("last", tr("The folder it showed when last closed")),
+            ("folder", tr("This folder:")),
+        ] {
+            opens.append(Some(id), &label);
+        }
+        if !opens.set_active_id(Some(&s.split_opens)) {
+            opens.set_active_id(Some("same"));
+        }
+        let folder = gtk::FileChooserButton::new(&tr("Select the folder for the extra pane"), gtk::FileChooserAction::SelectFolder);
+        folder.set_local_only(false);
+        let start = if s.split_folder.is_empty() { util::home_file().uri().to_string() } else { s.split_folder.clone() };
+        let _ = folder.set_current_folder_uri(&start);
+        folder.set_sensitive(s.split_opens == "folder");
+        folder.connect_current_folder_changed(|c| {
+            if let Some(uri) = c.uri().or_else(|| c.current_folder_uri()) {
+                config::update(|s| s.split_folder = uri.to_string());
+            }
+        });
+        {
+            let folder = folder.clone();
+            opens.connect_changed(move |c| {
+                let Some(id) = c.active_id() else { return };
+                let id = id.to_string();
+                folder.set_sensitive(id == "folder");
+                // The folder shown in the button, if none was picked yet.
+                let shown = folder.uri().or_else(|| folder.current_folder_uri()).map(|u| u.to_string());
+                config::update(|s| {
+                    if id == "folder" && s.split_folder.is_empty() {
+                        s.split_folder = shown.unwrap_or_default();
+                    }
+                    s.split_opens = id;
+                });
+            });
+        }
+        let row = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+        row.add(&opens);
+        row.add(&folder);
+        f.option(&b, &tr("The extra pane opens in:"), row.upcast_ref());
         f.head(&b, &tr("File Operations"));
         let own = setting_check(
             &tr("Show file operations in their own _window"),

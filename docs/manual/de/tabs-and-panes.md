@@ -29,7 +29,7 @@ Die geteilte Ansicht zeigt zwei Ordner nebeneinander, jeden mit eigenen Reitern:
 <img src="../../screenshots/split-light.png" alt="Geteilte Ansicht: ein persönlicher Ordner in der Symbolansicht und ein Musikalbum in der Listenansicht, jede Ansicht mit zwei Reitern">
 </picture>
 
-- **Ansicht → Zusätzliche Ansicht** (<kbd>F3</kbd>) öffnet und schließt die zweite Ansicht.
+- **Ansicht → Zusätzliche Ansicht** (<kbd>F3</kbd>) öffnet und schließt die zweite Ansicht. Sie öffnet sich im selben Ordner wie die Ansicht, in der Sie sind; beim Schließen bleibt die Ansicht, in der Sie sind, und die andere schließt sich mit ihren Reitern. Beides lässt sich unter **Einstellungen → Verhalten → Geteilte Ansicht** ändern: stattdessen die andere Ansicht behalten, und die zusätzliche Ansicht in Ihrem persönlichen Ordner öffnen, in dem Ordner, den sie beim letzten Schließen zeigte, oder in einem Ordner Ihrer Wahl.
 - Die Menüs und die Werkzeugleiste wirken auf die Ansicht, in die Sie zuletzt geklickt haben. <kbd>F6</kbd> wechselt zur anderen Ansicht.
 - **Ansicht → Ansichten tauschen** (<kbd>Strg</kbd>+<kbd>U</kbd>) tauscht die beiden Seiten, mit all ihren Reitern.
 - **Ansicht → Gleicher Ort wie andere Ansicht** geht zu dem Ordner, den die andere Ansicht zeigt.
