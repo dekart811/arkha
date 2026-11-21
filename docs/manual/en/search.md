@@ -15,7 +15,7 @@ Above the results, as in Caja, you can narrow the search down. The **+** button 
 
 | Criterion | Finds |
 |---|---|
-| **Location** | Items in another folder than the open one; with **including subfolders**, also in the folders in it |
+| **Location** | Items in another folder than the open one; with **include subfolders** ticked, also in the folders in it |
 | **File Type** | Documents, music, videos, pictures, illustrations, spreadsheets, presentations, PDF and PostScript, text files, or any other type you pick (**Other Type…**) |
 | **Tags** | Files that have all the tags you type, separated by spaces |
 | **Modification Time** | Files changed within, or longer ago than, an hour, a day, a week, a month, six months or a year |
@@ -24,9 +24,9 @@ Above the results, as in Caja, you can narrow the search down. The **+** button 
 
 ### Only this folder
 
-To search only the items of the folder itself, not the folders in it, untick **including subfolders** in the Location row above the results and press **Reload**. Folders whose names match are still found; what's inside them isn't.
+To search only the items of the folder itself, not the folders in it, untick **include subfolders** in the Location row above the results and press **Reload**. Folders whose names match are still found; what's inside them isn't.
 
-Whether a new search starts with **including subfolders** ticked is set in **Preferences → Behavior → Include subfolders**. It's on to begin with.
+Whether a new search starts with **include subfolders** ticked is set in **Preferences → Behavior → Include subfolders**. It's on to begin with.
 
 ## Selecting
 

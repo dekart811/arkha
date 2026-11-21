@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Arkha 1.3.0-dev\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-21 17:19+0100\n"
+"POT-Creation-Date: 2026-11-21 17:26+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2452,7 +2452,7 @@ msgid "Select folder to search in"
 msgstr ""
 
 #: src/search.rs:572
-msgid "including subfolders"
+msgid "include subfolders"
 msgstr ""
 
 #: src/search.rs:574
@@ -3660,7 +3660,7 @@ msgstr ""
 #: src/window/prefs.rs:349
 msgid ""
 "A new search (Ctrl+F) also looks in the folders inside the open one, and in "
-"theirs. Each search can change it above its results: “including subfolders”."
+"theirs. Each search can change it above its results: “include subfolders”."
 msgstr ""
 
 #: src/window/prefs.rs:355

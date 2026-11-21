@@ -1,5 +1,5 @@
 #!/bin/bash
-# search-subfolders.sh x11|wayland: "including subfolders" in the search's
+# search-subfolders.sh x11|wayland: "include subfolders" in the search's
 # Location row. Ticked (the default), a search looks in the folders inside
 # the one searched too; unticked and searched again (Reload), only in the
 # folder itself: a folder whose name matches is found, what's in it isn't.
@@ -19,7 +19,7 @@ gt_display
 gt_arkha "$D"
 gt_key ctrl+f; gt_type invoice; gt_key Return; sleep 2
 gt_check "ticked (the default): the subfolders too" "$(results)" "$ALL"
-gt_ok "untick including subfolders" gt_a11y press-in "*" "including subfolders"
+gt_ok "untick include subfolders" gt_a11y press-in "*" "include subfolders"
 gt_ok "Reload" gt_a11y press-in "*" "Reload"; sleep 2
 gt_shot only-here
 gt_check "unticked: only the folder itself" "$(results)" "$HERE"
@@ -30,7 +30,7 @@ printf '[General]\ndefault_view=list\nsearch_subfolders=false\n' > "$XDG_CONFIG_
 gt_arkha "$D"
 gt_key ctrl+f; gt_type invoice; gt_key Return; sleep 2
 gt_check "setting off: a new search only in the folder" "$(results)" "$HERE"
-gt_ok "tick including subfolders" gt_a11y press-in "*" "including subfolders"
+gt_ok "tick include subfolders" gt_a11y press-in "*" "include subfolders"
 gt_ok "Reload" gt_a11y press-in "*" "Reload"; sleep 2
 gt_check "ticked again: the subfolders too" "$(results)" "$ALL"
 

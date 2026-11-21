@@ -3,8 +3,8 @@
 # po/arkha.pot (gettext's xgettext; texts in tr(), trn() and n_()), then
 # brings every po/<language>.po up to date with it (msgmerge): new texts
 # are added untranslated, changed ones marked fuzzy for the translator to
-# check, and dropped ones kept at the end as obsolete. New source files
-# count before they are committed.
+# check, and dropped ones removed (no obsolete entries are kept: git has
+# them). New source files count before they are committed.
 #
 # A new translation: msginit -i po/arkha.pot -o po/<code>.po -l <code>, add
 # an "X-Language-Name: <the language's name in itself>\n" line to its
@@ -22,5 +22,6 @@ for po in po/*.po; do
     [ -e "$po" ] || continue
     # One line per text, as the files are written, for editing by hand.
     msgmerge --quiet --update --backup=none --no-wrap "$po" po/arkha.pot
+    msgattrib --no-obsolete --no-wrap --output-file="$po" "$po"
     printf '%s: ' "$po"; msgfmt --check --statistics -o /dev/null "$po"
 done

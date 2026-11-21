@@ -346,7 +346,7 @@ impl AppWindow {
         f.head(&b, &tr("Search"));
         let sub = setting_check(
             &tr("_Include subfolders"),
-            Some(&tr("A new search (Ctrl+F) also looks in the folders inside the open one, and in theirs. Each search can change it above its results: “including subfolders”.")),
+            Some(&tr("A new search (Ctrl+F) also looks in the folders inside the open one, and in theirs. Each search can change it above its results: “include subfolders”.")),
             s.search_subfolders,
             |s, v| s.search_subfolders = v,
             |_| {},

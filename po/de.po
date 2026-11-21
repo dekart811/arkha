@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Arkha 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-21 17:19+0100\n"
+"POT-Creation-Date: 2026-11-21 17:26+0100\n"
 "PO-Revision-Date: 2026-11-12 21:59+0100\n"
 "Last-Translator: \n"
 "Language-Team: German\n"
@@ -2427,8 +2427,8 @@ msgid "Select folder to search in"
 msgstr "Ordner zum Durchsuchen wählen"
 
 #: src/search.rs:572
-msgid "including subfolders"
-msgstr "einschließlich Unterordnern"
+msgid "include subfolders"
+msgstr "Unterordner einbeziehen"
 
 #: src/search.rs:574
 msgid "Also search the folders in this one, and theirs. Reload searches again."
@@ -3612,8 +3612,8 @@ msgid "_Include subfolders"
 msgstr "_Unterordner einbeziehen"
 
 #: src/window/prefs.rs:349
-msgid "A new search (Ctrl+F) also looks in the folders inside the open one, and in theirs. Each search can change it above its results: “including subfolders”."
-msgstr "Eine neue Suche (Strg+F) sucht auch in den Ordnern im offenen Ordner und in deren Ordnern. Jede Suche kann das über ihren Ergebnissen ändern: „einschließlich Unterordnern“."
+msgid "A new search (Ctrl+F) also looks in the folders inside the open one, and in theirs. Each search can change it above its results: “include subfolders”."
+msgstr "Eine neue Suche (Strg+F) sucht auch in den Ordnern im offenen Ordner und in deren Ordnern. Jede Suche kann das über ihren Ergebnissen ändern: „Unterordner einbeziehen“."
 
 #: src/window/prefs.rs:355
 msgid "Other Programs"
@@ -4320,9 +4320,3 @@ msgstr "Dateitypen:"
 #: src/window/prefs.rs:2060
 msgid "Name _patterns:"
 msgstr "Namens_muster:"
-
-#~ msgid "Search in s_ubfolders too"
-#~ msgstr "Auch in _Unterordnern suchen"
-
-#~ msgid "Checksums in Properties"
-#~ msgstr "Prüfsummen in den Eigenschaften"

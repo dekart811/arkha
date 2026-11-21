@@ -569,7 +569,7 @@ impl QueryEditor {
                 chooser.connect_current_folder_changed(move |_| c());
                 bx.pack_start(&chooser, false, false, 0);
                 // Unticked, only what the folder itself holds.
-                let sub = gtk::CheckButton::with_label(&tr("including subfolders"));
+                let sub = gtk::CheckButton::with_label(&tr("include subfolders"));
                 sub.set_active(*subfolders);
                 sub.set_tooltip_text(Some(&tr("Also search the folders in this one, and theirs. Reload searches again.")));
                 sub.connect_toggled(move |_| changed());

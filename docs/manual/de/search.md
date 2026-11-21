@@ -15,7 +15,7 @@ Drücken Sie <kbd>Strg</kbd>+<kbd>F</kbd> (**Gehe zu → Filter …** oder der K
 
 | Kriterium | Findet |
 |---|---|
-| **Ort** | Objekte in einem anderen Ordner als dem offenen; mit **einschließlich Unterordnern** auch in den Ordnern darin |
+| **Ort** | Objekte in einem anderen Ordner als dem offenen; ist **Unterordner einbeziehen** angehakt, auch in den Ordnern darin |
 | **Dateityp** | Dokumente, Musik, Videos, Bilder, Illustrationen, Tabellen, Präsentationen, PDF und PostScript, Textdateien oder jeden anderen Typ, den Sie wählen (**Anderer Typ …**) |
 | **Schlagwörter** | Dateien, die alle Schlagwörter haben, die Sie durch Leerzeichen getrennt eingeben |
 | **Änderungszeit** | Dateien, die innerhalb von oder vor mehr als einer Stunde, einem Tag, einer Woche, einem Monat, sechs Monaten oder einem Jahr geändert wurden |
@@ -24,9 +24,9 @@ Drücken Sie <kbd>Strg</kbd>+<kbd>F</kbd> (**Gehe zu → Filter …** oder der K
 
 ### Nur diesen Ordner
 
-Um nur die Objekte des Ordners selbst zu durchsuchen, nicht die Ordner darin, nehmen Sie in der Zeile Ort über den Ergebnissen den Haken bei **einschließlich Unterordnern** weg und drücken Sie **Neu laden**. Ordner, deren Namen passen, werden weiter gefunden; was in ihnen liegt, nicht.
+Um nur die Objekte des Ordners selbst zu durchsuchen, nicht die Ordner darin, nehmen Sie in der Zeile Ort über den Ergebnissen den Haken bei **Unterordner einbeziehen** weg und drücken Sie **Neu laden**. Ordner, deren Namen passen, werden weiter gefunden; was in ihnen liegt, nicht.
 
-Ob eine neue Suche mit angehaktem **einschließlich Unterordnern** beginnt, stellen Sie unter **Einstellungen → Verhalten → Unterordner einbeziehen** ein. Am Anfang ist es eingeschaltet.
+Ob eine neue Suche mit angehaktem **Unterordner einbeziehen** beginnt, stellen Sie unter **Einstellungen → Verhalten → Unterordner einbeziehen** ein. Am Anfang ist es eingeschaltet.
 
 ## Auswählen
 
