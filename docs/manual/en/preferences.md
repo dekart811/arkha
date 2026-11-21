@@ -16,6 +16,7 @@
 - **Split View:** let the pane under the mouse pointer take the keys and menus, after it rests there for a moment you set.
 - **File Operations:** show copies and moves in a window of their own, instead of the button in the location bar.
 - **Trash:** ask before moving files to the trash.
+- **Search:** whether a new search also looks in the subfolders (see [Searching and selecting](search.md#only-this-folder)).
 - **Other Programs:** let programs that "show a file in its folder" start Arkha when it isn't running.
 - **Scrolling:** a middle-click on empty space autoscrolls.
 

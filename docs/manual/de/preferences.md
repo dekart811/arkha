@@ -16,6 +16,7 @@
 - **Geteilte Ansicht:** die Ansicht unter dem Mauszeiger die Tasten und Menüs übernehmen lassen, nachdem er einen einstellbaren Moment darauf geruht hat.
 - **Dateivorgänge:** Kopien und Verschiebungen in einem eigenen Fenster zeigen statt mit dem Knopf in der Ortsleiste.
 - **Papierkorb:** vor dem Verschieben in den Papierkorb nachfragen.
+- **Suche:** ob eine neue Suche auch in den Unterordnern sucht (siehe [Suchen und Auswählen](search.md#nur-diesen-ordner)).
 - **Andere Programme:** Programme, die „eine Datei in ihrem Ordner zeigen“, Arkha starten lassen, wenn es nicht läuft.
 - **Rollen:** ein Mittelklick auf eine freie Fläche rollt automatisch.
 

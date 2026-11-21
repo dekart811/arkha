@@ -58,8 +58,8 @@ pub enum FileType {
 /// One of the query editor's rows.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Criterion {
-    /// The folder to search (a URI).
-    Location(String),
+    /// The folder to search (a URI), and whether the folders in it too.
+    Location { uri: String, subfolders: bool },
     FileType(FileType),
     /// Tags separated by spaces; files need all of them.
     Tags(String),
@@ -75,7 +75,7 @@ impl Criterion {
     /// location is `here`.
     fn new(kind: usize, here: &str) -> Criterion {
         match kind {
-            0 => Criterion::Location(here.to_string()),
+            0 => Criterion::location(here),
             1 => Criterion::FileType(FileType::Any),
             2 => Criterion::Tags(String::new()),
             3 => Criterion::ModTime { greater: false, duration: 0 },
@@ -84,9 +84,14 @@ impl Criterion {
         }
     }
 
+    /// A location row for `here`, with subfolders as Preferences say.
+    fn location(here: &str) -> Criterion {
+        Criterion::Location { uri: here.to_string(), subfolders: crate::config::with(|s| s.search_subfolders) }
+    }
+
     fn kind(&self) -> usize {
         match self {
-            Criterion::Location(_) => 0,
+            Criterion::Location { .. } => 0,
             Criterion::FileType(_) => 1,
             Criterion::Tags(_) => 2,
             Criterion::ModTime { .. } => 3,
@@ -106,7 +111,7 @@ pub struct Query {
 impl Query {
     /// A search for `text` from the search bar, in the folder `here`.
     pub fn new(text: &str, here: &gio::File) -> Query {
-        Query { text: text.to_string(), criteria: vec![Criterion::Location(here.uri().to_string())] }
+        Query { text: text.to_string(), criteria: vec![Criterion::location(&here.uri())] }
     }
 
     /// Caja's title for the results.
@@ -119,10 +124,10 @@ impl Query {
     /// file types and tags, which add up; with no location row it's the
     /// whole file system.
     pub fn params(&self) -> Params {
-        let mut p = Params { root: None, words: fold(&self.text).split(' ').map(str::to_string).collect(), mimes: vec![], tags: vec![], timestamp: 0, size: 0, text: None };
+        let mut p = Params { root: None, subfolders: true, words: fold(&self.text).split(' ').map(str::to_string).collect(), mimes: vec![], tags: vec![], timestamp: 0, size: 0, text: None };
         for c in &self.criteria {
             match c {
-                Criterion::Location(uri) => p.root = Some(uri.clone()),
+                Criterion::Location { uri, subfolders } => (p.root, p.subfolders) = (Some(uri.clone()), *subfolders),
                 Criterion::FileType(FileType::Any) => {}
                 Criterion::FileType(FileType::Group(g)) => p.mimes.extend(GROUPS[*g].1.iter().map(|m| m.to_string())),
                 Criterion::FileType(FileType::Other(mime, _)) => p.mimes.push(mime.clone()),
@@ -157,6 +162,8 @@ impl Query {
 pub struct Params {
     /// The folder to search, a URI (None: the file system).
     root: Option<String>,
+    /// The folders in it too (and theirs), or only what it holds itself.
+    subfolders: bool,
     /// The words of the text, all of which a name must contain.
     words: Vec<String>,
     /// MIME types of which a file must be one (none: any).
@@ -281,8 +288,8 @@ const TEXT_TYPES: [&str; 6] = [
 ];
 
 /// Runs a search (in a thread of its own), as Caja's simple search engine
-/// does: breadth first from the root, hidden items left out (and not
-/// looked into), each folder visited once. The matches go to `found` as
+/// does: breadth first from the root (or only in it, without subfolders),
+/// hidden items left out (and not looked into), each folder visited once. The matches go to `found` as
 /// (folder URI, name) pairs, a few hundred items' worth at a time; it
 /// stops when `found` returns false or `go_on` does.
 pub fn run(p: &Params, go_on: impl Fn() -> bool, mut found: impl FnMut(Vec<(String, String)>) -> bool) {
@@ -353,7 +360,7 @@ pub fn run(p: &Params, go_on: impl Fn() -> bool, mut found: impl FnMut(Vec<(Stri
                     return;
                 }
             }
-            if info.file_type() == gio::FileType::Directory {
+            if p.subfolders && info.file_type() == gio::FileType::Directory {
                 let seen = info.attribute_string("id::file").is_some_and(|id| !visited.insert(id.to_string()));
                 if !seen {
                     todo.push_back(dir.child(&name));
@@ -552,12 +559,22 @@ impl QueryEditor {
             }
         };
         let (widget, expand): (gtk::Widget, bool) = match c {
-            Criterion::Location(uri) => {
+            Criterion::Location { uri, subfolders } => {
+                let bx = gtk::Box::new(gtk::Orientation::Horizontal, 12);
                 let chooser = gtk::FileChooserButton::new(&tr("Select folder to search in"), gtk::FileChooserAction::SelectFolder);
                 chooser.set_local_only(false);
                 let _ = chooser.set_current_folder_uri(uri);
-                chooser.connect_current_folder_changed(move |_| changed());
-                (chooser.upcast(), false)
+                let changed = Rc::new(changed);
+                let c = changed.clone();
+                chooser.connect_current_folder_changed(move |_| c());
+                bx.pack_start(&chooser, false, false, 0);
+                // Unticked, only what the folder itself holds.
+                let sub = gtk::CheckButton::with_label(&tr("including subfolders"));
+                sub.set_active(*subfolders);
+                sub.set_tooltip_text(Some(&tr("Also search the folders in this one, and theirs. Reload searches again.")));
+                sub.connect_toggled(move |_| changed());
+                bx.pack_start(&sub, false, false, 0);
+                (bx.upcast(), false)
             }
             Criterion::FileType(t) => (self.type_combo(t, changed).upcast(), false),
             Criterion::Tags(text) | Criterion::ContainedText(text) => {
@@ -662,9 +679,13 @@ fn read_row(row: &Row) -> Option<Criterion> {
     };
     Some(match row.kind.get() {
         0 => {
-            // The chosen folder; just after it's set, only the shown one.
-            let chooser = w.downcast_ref::<gtk::FileChooserButton>()?;
-            Criterion::Location(chooser.uri().or_else(|| chooser.current_folder_uri())?.to_string())
+            // The chosen folder (just after it's set, only the shown one),
+            // and whether its subfolders too.
+            let parts = w.downcast_ref::<gtk::Box>()?.children();
+            let chooser = parts.iter().find_map(|c| c.downcast_ref::<gtk::FileChooserButton>().cloned())?;
+            let sub = parts.iter().find_map(|c| c.downcast_ref::<gtk::CheckButton>().cloned())?;
+            let uri = chooser.uri().or_else(|| chooser.current_folder_uri())?.to_string();
+            Criterion::Location { uri, subfolders: sub.is_active() }
         }
         1 => {
             let combo = w.downcast_ref::<gtk::ComboBox>()?;
@@ -770,11 +791,34 @@ mod tests {
     }
 
     #[test]
+    fn without_subfolders_only_the_folder_itself() {
+        let t = crate::testutil::TestDir::new("search-subfolders");
+        for p in ["invoice-1.pdf", "notes.txt", "invoices/invoice-2.pdf", "invoices/old/invoice-3.pdf"] {
+            let p = t.0.join(p);
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+            std::fs::write(p, "").unwrap();
+        }
+        let uri = gio::File::for_path(&t.0).uri().to_string();
+        let names = |subfolders: bool| {
+            let q = Query { text: "invoice".into(), criteria: vec![Criterion::Location { uri: uri.clone(), subfolders }] };
+            let mut got = vec![];
+            run(&q.params(), || true, |hits| {
+                got.extend(hits.into_iter().map(|(_, name)| name));
+                true
+            });
+            got.sort();
+            got
+        };
+        assert_eq!(names(false), ["invoice-1.pdf", "invoices"], "the folder's own items, a folder among them, nothing inside it");
+        assert_eq!(names(true), ["invoice-1.pdf", "invoice-2.pdf", "invoice-3.pdf", "invoices"]);
+    }
+
+    #[test]
     fn criteria_make_the_parameters() {
         let q = Query {
             text: "Un".into(),
             criteria: vec![
-                Criterion::Location("file:///tmp".into()),
+                Criterion::Location { uri: "file:///tmp".into(), subfolders: false },
                 Criterion::FileType(FileType::Group(8)),
                 Criterion::FileType(FileType::Other("image/png".into(), "PNG image".into())),
                 Criterion::Tags("a  B".into()),
@@ -784,13 +828,16 @@ mod tests {
         };
         let p = q.params();
         assert_eq!(p.root().uri(), "file:///tmp");
+        assert!(!p.subfolders);
         assert_eq!(p.words, ["un"]);
         assert_eq!(p.mimes, ["text/plain", "image/png"]);
         assert_eq!(p.tags, ["a", "b"]);
         assert_eq!(p.size.abs(), sizes()[3].0);
         assert!(p.size > 0);
         assert_eq!(p.text.as_deref(), Some("x"));
-        assert_eq!(Query { text: "a".into(), criteria: vec![] }.params().root().uri(), "file:///");
+        let everywhere = Query { text: "a".into(), criteria: vec![] }.params();
+        assert_eq!(everywhere.root().uri(), "file:///");
+        assert!(everywhere.subfolders, "no location row: the whole file system, all of it");
         assert_eq!(q.title(), "Search for “Un”");
     }
 

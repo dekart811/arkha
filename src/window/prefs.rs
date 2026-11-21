@@ -343,6 +343,15 @@ impl AppWindow {
         f.head(&b, &tr("Trash"));
         let confirm = setting_check(&tr("Ask before moving files to the T_rash"), None, s.confirm_trash, |s, v| s.confirm_trash = v, |_| {});
         f.indent(&b, confirm.upcast_ref());
+        f.head(&b, &tr("Search"));
+        let sub = setting_check(
+            &tr("_Include subfolders"),
+            Some(&tr("A new search (Ctrl+F) also looks in the folders inside the open one, and in theirs. Each search can change it above its results: “including subfolders”.")),
+            s.search_subfolders,
+            |s, v| s.search_subfolders = v,
+            |_| {},
+        );
+        f.indent(&b, sub.upcast_ref());
         f.head(&b, &tr("Other Programs"));
         let fm1 = f.check(&tr("Open folders when other programs _ask, also when Arkha isn't running"));
         fm1.set_tooltip_text(Some(&tr("“Show in folder” in web browsers, download lists and the like opens Arkha, with the file selected. While Arkha runs it does this anyway, unless another file manager that does it was there first; this lets programs start Arkha for it too.")));

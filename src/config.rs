@@ -105,6 +105,8 @@ pub struct Settings {
     /// File operations in their own window (opened when one takes a while)
     /// instead of the location bar's button and its popover.
     pub ops_window: bool,
+    /// A new search looks in the subfolders too (each search can change it).
+    pub search_subfolders: bool,
     pub single_click: bool,
     /// Previews, as Caja has them, each "always", "local" (local files
     /// only: not GVfs places such as network shares) or "never" (see
@@ -297,6 +299,7 @@ impl Default for Settings {
             path_as_text: false,
             confirm_trash: true,
             ops_window: false,
+            search_subfolders: true,
             single_click: false,
             show_thumbnails: "local".into(),
             own_colors: vec![],
@@ -507,6 +510,7 @@ fn from_keyfile(kf: &glib::KeyFile) -> Settings {
     }
     b!(confirm_trash);
     b!(ops_window);
+    b!(search_subfolders);
     b!(single_click);
     for (key, field) in [("show_thumbnails", &mut s.show_thumbnails), ("text_in_icons", &mut s.text_in_icons), ("count_items", &mut s.count_items)] {
         if let Ok(v) = kf.string(g, key) {
@@ -674,6 +678,7 @@ fn to_keyfile(s: &Settings) -> glib::KeyFile {
     kf.set_boolean(g, "path_as_text", s.path_as_text);
     kf.set_boolean(g, "confirm_trash", s.confirm_trash);
     kf.set_boolean(g, "ops_window", s.ops_window);
+    kf.set_boolean(g, "search_subfolders", s.search_subfolders);
     kf.set_boolean(g, "single_click", s.single_click);
     kf.set_string(g, "show_thumbnails", &s.show_thumbnails);
     set_string_list(&kf, g, "own_colors", &s.own_colors);

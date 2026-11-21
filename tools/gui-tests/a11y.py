@@ -18,7 +18,7 @@ same on X11 and Wayland, where window titles can't be read otherwise.
                         or "name|off"
     a11y.py labels      its first dialog's (or message box's) texts, a line each
     a11y.py window-labels  the main windows' texts (status bar, side pane, …)
-    a11y.py press-in TITLE TEXT  presses that button in its window TITLE
+    a11y.py press-in TITLE TEXT  presses that button (or check box) in its window TITLE
                         (* for any), as a screen reader would
     a11y.py labels-in TITLE  the texts in its window called TITLE, in order
     a11y.py focused-text  the text of the text field that has the focus
@@ -171,7 +171,7 @@ def main():
         for w in windows(app):
             if sys.argv[2] not in ("*", w.get_name()):
                 continue
-            for role in ("button", "push button", "toggle button"):
+            for role in ("button", "push button", "toggle button", "check box"):
                 for b in find(w, role, []):
                     if (b.get_name() or "").startswith(sys.argv[3]) or (b.get_description() or "").startswith(sys.argv[3]):
                         b.get_action_iface().do_action(0)

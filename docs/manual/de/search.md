@@ -4,7 +4,7 @@
 
 Drücken Sie <kbd>Strg</kbd>+<kbd>F</kbd> (**Gehe zu → Filter …** oder der Knopf Suchen in der Werkzeugleiste), und ein Suchfeld tritt an die Stelle des Pfads.
 
-- Tippen Sie, was Sie suchen, und drücken Sie **Eingabe**: Arkha durchsucht den offenen Ordner und alle Ordner darin nach Namen, die es enthalten, jedes Wort davon, in beliebiger Reihenfolge, in Groß- oder Kleinschreibung (`ord unb` findet „Unbenannter Ordner“).
+- Tippen Sie, was Sie suchen, und drücken Sie **Eingabe**: Arkha durchsucht den offenen Ordner und alle Ordner darin (siehe [Nur diesen Ordner](#nur-diesen-ordner)) nach Namen, die es enthalten, jedes Wort davon, in beliebiger Reihenfolge, in Groß- oder Kleinschreibung (`ord unb` findet „Unbenannter Ordner“).
 - Die Ergebnisse erscheinen als eigener Ort, mit einer Spalte **Ort**, die sagt, wo jedes Objekt liegt; **Zurück** führt zum Ordner zurück. **Übergeordneten Ort öffnen** im Kontextmenü eines Ergebnisses öffnet den Ordner, in dem es liegt.
 - Um mit anderen Wörtern neu zu suchen, ändern Sie sie und drücken erneut **Eingabe**.
 - <kbd>Esc</kbd> schließt das Suchfeld.
@@ -15,12 +15,18 @@ Drücken Sie <kbd>Strg</kbd>+<kbd>F</kbd> (**Gehe zu → Filter …** oder der K
 
 | Kriterium | Findet |
 |---|---|
-| **Ort** | Objekte in einem anderen Ordner als dem offenen (und den Ordnern darin) |
+| **Ort** | Objekte in einem anderen Ordner als dem offenen; mit **einschließlich Unterordnern** auch in den Ordnern darin |
 | **Dateityp** | Dokumente, Musik, Videos, Bilder, Illustrationen, Tabellen, Präsentationen, PDF und PostScript, Textdateien oder jeden anderen Typ, den Sie wählen (**Anderer Typ …**) |
 | **Schlagwörter** | Dateien, die alle Schlagwörter haben, die Sie durch Leerzeichen getrennt eingeben |
 | **Änderungszeit** | Dateien, die innerhalb von oder vor mehr als einer Stunde, einem Tag, einer Woche, einem Monat, sechs Monaten oder einem Jahr geändert wurden |
 | **Größe** | Dateien, die höchstens oder mindestens so groß sind wie gewählt |
 | **Enthaltener Text** | Dateien, die den Text enthalten |
+
+### Nur diesen Ordner
+
+Um nur die Objekte des Ordners selbst zu durchsuchen, nicht die Ordner darin, nehmen Sie in der Zeile Ort über den Ergebnissen den Haken bei **einschließlich Unterordnern** weg und drücken Sie **Neu laden**. Ordner, deren Namen passen, werden weiter gefunden; was in ihnen liegt, nicht.
+
+Ob eine neue Suche mit angehaktem **einschließlich Unterordnern** beginnt, stellen Sie unter **Einstellungen → Verhalten → Unterordner einbeziehen** ein. Am Anfang ist es eingeschaltet.
 
 ## Auswählen
 
