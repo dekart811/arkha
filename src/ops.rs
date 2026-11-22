@@ -1943,26 +1943,20 @@ pub fn note_renames(items: Vec<(String, String)>) {
 /// Renamed items' thumbnails renamed too, and a renamed folder's remembered
 /// view goes with it. As in a move: a file's at once, before the view shows
 /// it under its new name and asks for its thumbnail, which would make it
-/// again (as it did, now and then); a folder's (those of everything in it),
-/// and those of more files than are quickly done (Rename All), in a thread
-/// of their own. Only local files have thumbnails.
+/// again (as it did, now and then); those of everything in a folder, and
+/// those of more files than are quickly done (Rename All), in a thread of
+/// their own. Network places have thumbnails too (Preferences → Preview),
+/// and asking one which items are folders would be a trip there each.
 fn thumbnails_renamed(items: Vec<(String, String)>) {
     /// Files whose thumbnails are renamed at once, at most.
     const AT_ONCE: usize = 100;
     crate::folders::follow(&items.iter().map(|(a, b)| (a.clone(), Some(b.clone()))).collect::<Vec<_>>());
-    // (Asked only of local files: elsewhere it can take a trip over the
-    // network, and there are no thumbnails to look for in it.)
-    let (mut later, now): (Vec<_>, Vec<_>) = items
-        .into_iter()
-        .partition(|(_, to)| to.starts_with("file:///") && kind_of(&gio::File::for_uri(to)) == Some(gio::FileType::Directory));
     let root = thumbcache::root();
-    if now.len() <= AT_ONCE {
-        thumbcache::moved(&root, &now);
+    if items.len() <= AT_ONCE {
+        thumbcache::moved_items(&root, &items);
+        std::thread::spawn(move || thumbcache::moved_inside(&root, &items));
     } else {
-        later.extend(now);
-    }
-    if !later.is_empty() {
-        std::thread::spawn(move || thumbcache::moved(&root, &later));
+        std::thread::spawn(move || thumbcache::moved(&root, &items));
     }
 }
 

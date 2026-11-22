@@ -28,11 +28,6 @@ fn fail_note(root: &Path, uri: &str) -> PathBuf {
     root.join("fail").join("arkha").join(name(uri))
 }
 
-/// Only local files have thumbnails here.
-fn local(uri: &str) -> bool {
-    uri.starts_with("file:///")
-}
-
 /// Tells Arkha's views which thumbnail files changed: `written` (the URI
 /// of the file they're for, their path), `removed` (paths). They keep
 /// loaded thumbnails in memory by path, and a file's thumbnail has the
@@ -55,11 +50,17 @@ pub fn forget(root: &Path, uri: &str) {
     tell(vec![], remove(root, uri));
 }
 
+/// Whether a move or copy from `old` to `new` takes thumbnails along. Not
+/// out of the trash or into it: a trashed file keeps its thumbnail under
+/// its URI before (restored, it's back there; a restore was taking it
+/// away, and it was made again).
+fn follows(old: &str, new: &str) -> bool {
+    let trash = |u: &str| u.starts_with("trash:");
+    old != new && !trash(old) && !trash(new)
+}
+
 /// `forget` without telling the views: the paths removed.
 fn remove(root: &Path, uri: &str) -> Vec<PathBuf> {
-    if !local(uri) {
-        return vec![];
-    }
     let n = name(uri);
     let mut gone: Vec<PathBuf> = SIZES.iter().map(|s| root.join(s).join(&n)).filter(|p| std::fs::remove_file(p).is_ok()).collect();
     if std::fs::remove_file(fail_note(root, uri)).is_ok() {
@@ -76,7 +77,7 @@ fn remove(root: &Path, uri: &str) -> Vec<PathBuf> {
 pub fn copied(root: &Path, items: &[(String, String)]) {
     let mut written = vec![];
     let mut removed = vec![];
-    for (old, new) in items.iter().filter(|(o, n)| local(o) && local(n) && o != n) {
+    for (old, new) in items.iter().filter(|(o, n)| follows(o, n)) {
         removed.extend(remove(root, new));
         for s in SIZES {
             if let Some(png) = std::fs::read(root.join(s).join(name(old))).ok().and_then(|b| with_uri(&b, old, new)) {
@@ -95,20 +96,39 @@ pub fn copied(root: &Path, items: &[(String, String)]) {
 /// renames like a → b, b → a keep each its own. A thumbnail whose
 /// Thumb::URI isn't the item's is left; failure notes go (the file is
 /// tried again at its new place), as do the new names' old thumbnails
-/// (of items the move replaced).
+/// (of items the move replaced). Files on network places have thumbnails
+/// too, when Preferences → Preview says so (also those of a phone, when
+/// GVfs gives them a path).
 pub fn moved(root: &Path, items: &[(String, String)]) {
-    let mut all = vec![];
-    let mut removed = vec![];
-    for (old, new) in items {
-        if local(old) && local(new) && old != new {
-            all.push((old.clone(), new.clone()));
-            below(old, new, &mut all);
-        } else if local(old) && !local(new) {
-            // To a network place, a phone…: none are made there, the old
-            // one would only stay behind.
-            removed.extend(remove(root, old));
-        }
+    let mut all = items.to_vec();
+    for (old, new) in items.iter().filter(|(o, n)| follows(o, n)) {
+        below(old, new, &mut all);
     }
+    move_all(root, all);
+}
+
+/// `moved` for the items themselves, not what's in a folder among them: a
+/// rename can't wait for going through it (moved_inside does), or for
+/// asking a network place what each is.
+pub fn moved_items(root: &Path, items: &[(String, String)]) {
+    move_all(root, items.to_vec());
+}
+
+/// `moved` for what's in the folders among `items` (the others are left).
+pub fn moved_inside(root: &Path, items: &[(String, String)]) {
+    let mut all = vec![];
+    for (old, new) in items.iter().filter(|(o, n)| follows(o, n)) {
+        below(old, new, &mut all);
+    }
+    move_all(root, all);
+}
+
+fn move_all(root: &Path, mut all: Vec<(String, String)>) {
+    all.retain(|(old, new)| follows(old, new));
+    if all.is_empty() {
+        return;
+    }
+    let mut removed = vec![];
     let mut keep = vec![];
     for (old, new) in &all {
         for s in SIZES {
@@ -130,9 +150,12 @@ pub fn moved(root: &Path, items: &[(String, String)]) {
 }
 
 /// (URI before, URI now) of everything in the folder `new` (moved there
-/// from `old`), added to `out`. Links aren't followed.
+/// from `old`), added to `out`. Links aren't followed. On a network place
+/// it goes through GVfs's path for it, but names the items by the place's
+/// own URIs (sftp://…), as their thumbnails are.
 fn below(old: &str, new: &str, out: &mut Vec<(String, String)>) {
-    let Some(dir) = gio::File::for_uri(new).path() else { return };
+    let new = gio::File::for_uri(new);
+    let Some(dir) = new.path() else { return };
     if !std::fs::symlink_metadata(&dir).is_ok_and(|m| m.is_dir()) {
         return;
     }
@@ -143,7 +166,7 @@ fn below(old: &str, new: &str, out: &mut Vec<(String, String)>) {
         for e in entries.flatten() {
             let p = e.path();
             let Ok(rel) = p.strip_prefix(&dir) else { continue };
-            out.push((old.resolve_relative_path(rel).uri().to_string(), gio::File::for_path(&p).uri().to_string()));
+            out.push((old.resolve_relative_path(rel).uri().to_string(), new.resolve_relative_path(rel).uri().to_string()));
             if e.file_type().is_ok_and(|t| t.is_dir()) {
                 todo.push(p);
             }
@@ -302,7 +325,72 @@ pub(crate) mod tests {
         forget(&root, &u("b.mp4"));
         assert!(SIZES.iter().all(|s| !root.join(s).join(name(&u("b.mp4"))).exists()));
         assert!(!fail_note(&root, &u("b.mp4")).exists());
-        // Not local: nothing done.
-        moved(&root, &[("sftp://h/x".into(), u("x"))]);
+    }
+
+    #[test]
+    fn network_places_have_thumbnails_too() {
+        // Preferences → Preview → Show thumbnails: Always.
+        let t = TestDir::new("thumbsnet");
+        let root = t.0.join("cache");
+        let (a, b, c) = ("sftp://nas/photos/a%20b.jpg", "sftp://nas/photos/c.jpg", "smb://nas/share/c.jpg");
+        put(&root, "large", a);
+        moved(&root, &[(a.into(), b.into())]);
+        assert!(has(&root, "large", b) && !root.join("large").join(name(a)).exists());
+        // Between a network place and a local folder, both ways.
+        let local = gio::File::for_path(t.0.join("c.jpg")).uri().to_string();
+        moved(&root, &[(b.into(), local.clone())]);
+        assert!(has(&root, "large", &local) && !root.join("large").join(name(b)).exists());
+        copied(&root, &[(local.clone(), c.into())]);
+        assert!(has(&root, "large", &local) && has(&root, "large", c));
+        forget(&root, c);
+        assert!(!root.join("large").join(name(c)).exists());
+        // Its own URI, nothing done.
+        moved(&root, &[(local.clone(), local.clone())]);
+        assert!(has(&root, "large", &local));
+    }
+
+    #[test]
+    fn the_trash_leaves_thumbnails_alone() {
+        let t = TestDir::new("thumbstrash");
+        let root = t.0.join("cache");
+        std::fs::create_dir_all(t.0.join("photos/sub")).unwrap();
+        let u = |p: &str| gio::File::for_path(t.0.join(p)).uri().to_string();
+        // Kept under the URI before for a restore, which puts the file
+        // (or folder) back there: not taken away by it.
+        put(&root, "large", &u("photos/a.jpg"));
+        put(&root, "large", &u("photos/sub/b.jpg"));
+        moved(&root, &[("trash:///a.jpg".into(), u("photos/a.jpg")), ("trash:///sub".into(), u("photos/sub"))]);
+        moved_items(&root, &[("trash:///a.jpg".into(), u("photos/a.jpg"))]);
+        moved_inside(&root, &[("trash:///sub".into(), u("photos/sub"))]);
+        copied(&root, &[("trash:///a.jpg".into(), u("photos/a.jpg"))]);
+        assert!(has(&root, "large", &u("photos/a.jpg")) && has(&root, "large", &u("photos/sub/b.jpg")));
+        // Nor moved to a trash URI.
+        moved(&root, &[(u("photos/a.jpg"), "trash:///a.jpg".into())]);
+        assert!(has(&root, "large", &u("photos/a.jpg")) && !root.join("large").join(name("trash:///a.jpg")).exists());
+    }
+
+    #[test]
+    fn renamed_items_now_their_contents_later() {
+        let t = TestDir::new("thumbsplit");
+        let root = t.0.join("cache");
+        let files = t.0.join("files");
+        std::fs::create_dir_all(files.join("new")).unwrap();
+        std::fs::write(files.join("new/clip.mp4"), b"").unwrap();
+        let u = |p: &str| gio::File::for_path(files.join(p)).uri().to_string();
+        put(&root, "large", &u("a.mp4"));
+        put(&root, "large", &u("old/clip.mp4"));
+        let items = [(u("a.mp4"), u("b.mp4")), (u("old"), u("new"))];
+        moved_items(&root, &items);
+        assert!(has(&root, "large", &u("b.mp4")));
+        assert!(has(&root, "large", &u("old/clip.mp4")) && !root.join("large").join(name(&u("new/clip.mp4"))).exists());
+        moved_inside(&root, &items);
+        assert!(has(&root, "large", &u("new/clip.mp4")) && !root.join("large").join(name(&u("old/clip.mp4"))).exists());
+        // A file among them isn't gone through (b.mp4 isn't a folder), and
+        // a file name with what URIs escape keeps its escapes.
+        assert!(has(&root, "large", &u("b.mp4")));
+        std::fs::write(files.join("new/x y#.mp4"), b"").unwrap();
+        put(&root, "large", &u("old/x y#.mp4"));
+        moved_inside(&root, &[(u("old"), u("new"))]);
+        assert!(has(&root, "large", &u("new/x y#.mp4")));
     }
 }

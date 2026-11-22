@@ -146,6 +146,7 @@ gt_click() { xdotool mousemove "$1" "$2" click "${3:-1}"; sleep 0.5; gt_quiet; }
 gt_go() { gt_key ctrl+l; gt_type "$1"; gt_key Return; sleep "${2:-0.8}"; gt_quiet; }
 
 # gt_title [SECONDS]: the first window's title (GT_A11Y=1), after SECONDS.
+# shellcheck disable=SC2120  # SECONDS is optional
 gt_title() { [ -z "$1" ] || sleep "$1"; gt_a11y windows | head -1; }
 
 # gt_conf KEY VALUE: sets KEY in arkha.conf's [General] group (with Arkha
@@ -166,6 +167,7 @@ gt_conf() {
 # gt_prefs [PAGE]: opens Preferences, and selects page PAGE (counted from
 # 0, as listed: 1 is Behavior) if given. The call returns only once the
 # window closes, so it's started apart.
+# shellcheck disable=SC2120  # PAGE is optional
 gt_prefs() {
   gdbus call --session --dest $APP_ID --object-path $APP_PATH/window/1 \
     --method org.gtk.Actions.Activate preferences [] {} >/dev/null & sleep 2
