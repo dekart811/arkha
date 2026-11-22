@@ -106,8 +106,9 @@ struct Worker {
     /// The destination is FAT32: no file of 4 GB or more.
     fat32: bool,
     /// Originals whose copies got their thumbnails in a move between
-    /// drives, theirs going once they're deleted (thumbnails_of_deleted).
-    thumbs_of_copied: Vec<String>,
+    /// drives, theirs going once they're deleted (thumbnails_of_deleted):
+    /// (the original's URI, the URI its thumbnails are under, the copy's).
+    thumbs_of_copied: Vec<(String, String, String)>,
     total_bytes: u64,
     done_bytes: u64,
     total_items: u64,
@@ -241,6 +242,31 @@ fn items_detail(done: u64, total: u64, working: Duration) -> String {
 }
 
 const NOFOLLOW: gio::FileQueryInfoFlags = gio::FileQueryInfoFlags::NOFOLLOW_SYMLINKS;
+
+/// The URI `f`'s thumbnails are kept under: its own; in the trash, the
+/// one it had before (the trashed item's trash::orig-path, what's in a
+/// trashed folder below it), where a restore puts it back.
+fn thumb_uri(f: &gio::File) -> String {
+    if !f.has_uri_scheme("trash") {
+        return f.uri().to_string();
+    }
+    let root = gio::File::for_uri("trash:///");
+    let mut top = f.clone();
+    while let Some(p) = top.parent().filter(|p| !p.equal(&root)) {
+        top = p;
+    }
+    let orig = top
+        .query_info("trash::orig-path", NOFOLLOW, gio::Cancellable::NONE)
+        .ok()
+        .and_then(|i| i.attribute_byte_string("trash::orig-path"));
+    match orig {
+        Some(o) => {
+            let o = gio::File::for_path(o.as_str());
+            top.relative_path(f).map_or(o.clone(), |rel| o.resolve_relative_path(rel)).uri().to_string()
+        }
+        None => f.uri().to_string(),
+    }
+}
 
 fn kind_of(f: &gio::File) -> Option<gio::FileType> {
     f.query_info("standard::type", NOFOLLOW, gio::Cancellable::NONE)
@@ -582,11 +608,13 @@ impl Worker {
     /// of all in it), as soon as it's there: before the folder shown asks
     /// for them, which would make them again. A folder's on a thread of
     /// their own: going through a big one took the move a while.
-    fn thumbnails_moved(&self, src: &gio::File, dst: &gio::File) {
+    /// `thumbs`: the URI `src`'s thumbnails are under (thumb_uri, asked
+    /// before the move: out of the trash, it's gone after it).
+    fn thumbnails_moved(&self, thumbs: String, dst: &gio::File) {
         if self.kind != Kind::Move {
             return;
         }
-        let (root, items) = (self.thumbs.clone(), vec![(src.uri().to_string(), dst.uri().to_string())]);
+        let (root, items) = (self.thumbs.clone(), vec![(thumbs, dst.uri().to_string())]);
         if kind_of(dst) == Some(gio::FileType::Directory) {
             std::thread::spawn(move || thumbcache::moved(&root, &items));
         } else {
@@ -599,18 +627,19 @@ impl Worker {
     /// original keeps them until it's deleted (thumbnails_of_deleted).
     fn thumbnails_copied(&mut self, src: &gio::File, dst: &gio::File) {
         if self.kind == Kind::Move {
-            let src = src.uri().to_string();
-            thumbcache::copied(&self.thumbs, &[(src.clone(), dst.uri().to_string())]);
-            self.thumbs_of_copied.push(src);
+            let (thumbs, dst) = (thumb_uri(src), dst.uri().to_string());
+            thumbcache::copied(&self.thumbs, &[(thumbs.clone(), dst.clone())]);
+            self.thumbs_of_copied.push((src.uri().to_string(), thumbs, dst));
         }
     }
 
     /// The originals' thumbnails, once a move between drives deleted them
-    /// (those still there, kept by a skip, keep theirs).
+    /// (those still there, kept by a skip, keep theirs; one restored from
+    /// the trash had its thumbnails under its new URI all along).
     fn thumbnails_of_deleted(&mut self) {
-        for uri in std::mem::take(&mut self.thumbs_of_copied) {
-            if !gio::File::for_uri(&uri).query_exists(gio::Cancellable::NONE) {
-                thumbcache::forget(&self.thumbs, &uri);
+        for (uri, thumbs, dst) in std::mem::take(&mut self.thumbs_of_copied) {
+            if thumbs != dst && !gio::File::for_uri(&uri).query_exists(gio::Cancellable::NONE) {
+                thumbcache::forget(&self.thumbs, &thumbs);
             }
         }
     }
@@ -915,10 +944,11 @@ impl Worker {
             | gio::FileCopyFlags::NO_FALLBACK_FOR_MOVE;
         let mut replaced = false;
         let name = base_name(src);
+        let thumbs = if self.kind == Kind::Move { thumb_uri(src) } else { String::new() };
         loop {
             match src.move_(&dst, flags, Some(&self.cancel), None) {
                 Ok(()) => {
-                    self.thumbnails_moved(src, &dst);
+                    self.thumbnails_moved(thumbs.clone(), &dst);
                     self.record(src, &dst, replaced || flags.contains(gio::FileCopyFlags::OVERWRITE));
                     self.done_items += 1;
                     if created.is_none() {
@@ -1308,17 +1338,6 @@ fn inside_through_links(dest_dir: &gio::File, src: &gio::File) -> bool {
         (Some(d), Some(s)) => d.starts_with(&s),
         _ => false,
     }
-}
-
-/// The URI `f`'s thumbnails are kept under: for an item in the trash,
-/// where it came from (trashed, it kept them).
-fn thumb_uri(f: &gio::File) -> String {
-    if f.uri_scheme().as_deref() == Some("trash") {
-        if let Some(p) = f.query_info("trash::orig-path", NOFOLLOW, gio::Cancellable::NONE).ok().and_then(|i| i.attribute_byte_string("trash::orig-path")) {
-            return gio::File::for_path(p.as_str()).uri().to_string();
-        }
-    }
-    f.uri().to_string()
 }
 
 /// Calls `f` when an operation has taken items from where they were, with

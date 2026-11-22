@@ -16,7 +16,7 @@ gt_display
 gio set -t stringv "$T/one/a.txt" metadata::emblems important
 META=""
 for p in $(pgrep -x gvfsd-metadata); do
-  tr '\0' '\n' < /proc/$p/environ 2>/dev/null | grep -qx "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" && META=$p
+  tr '\0' '\n' < "/proc/$p/environ" 2>/dev/null | grep -qx "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" && META=$p
 done
 gt_ok "this session's metadata service found" test -n "$META"
 gt_arkha "$T/one"

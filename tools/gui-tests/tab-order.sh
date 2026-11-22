@@ -22,9 +22,9 @@ to_front() {  # to_front TAB FIRST: TAB dragged in front of FIRST (on X11)
 drag_tab() {  # drag_tab FROM TO: FROM dropped on TO's left half
   local from to; from=$(gt_a11y where-tab "$1"); to=$(gt_a11y where-tab "$2")
   [ -n "$from" ] && [ -n "$to" ] || { echo "FAIL no tab $1 or $2" >> "$OUT/result"; return; }
-  set -- $from $to
-  xdotool mousemove $1 $2 mousedown 1; sleep 0.3
-  for i in $(seq 1 12); do xdotool mousemove $(( $1 + ($3 - 20 - $1) * i / 12 )) $2; sleep 0.05; done
+  local fx fy tx; read -r fx fy <<< "$from"; read -r tx _ <<< "$to"
+  xdotool mousemove "$fx" "$fy" mousedown 1; sleep 0.3
+  for i in $(seq 1 12); do xdotool mousemove $(( fx + (tx - 20 - fx) * i / 12 )) "$fy"; sleep 0.05; done
   sleep 0.3; xdotool mouseup 1; sleep 0.8
 }
 props() { gt_click 900 650; gt_type "$1"; gt_key Escape; gdbus call --session --dest $APP_ID \

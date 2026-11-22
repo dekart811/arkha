@@ -81,7 +81,7 @@ for dir in "$GT_FIX/thumbtest" /usr/share/backgrounds/gnome; do
       [ $same -ge 6 ] && break; [ $(( ($(date +%s%N) - t0) / 1000000000 )) -gt 60 ] && break
     done
     read -r u s cu cs < <(awk '{print $14, $15, $16, $17}' /proc/$P/stat)
-    kids=0; for c in $(pgrep -P $P); do k=$(awk '{print $14+$15+$16+$17}' /proc/$c/stat 2>/dev/null); kids=$((kids+${k:-0})); done
+    kids=0; for c in $(pgrep -P "$P"); do k=$(awk '{print $14+$15+$16+$17}' "/proc/$c/stat" 2>/dev/null); kids=$((kids+${k:-0})); done
     gt_note "$p: $n thumbnails, own $(( (u+s)*10 )) ms, children $(( (cu+cs+kids)*10 )) ms, done after $(( ($(date +%s%N) - t0) / 1000000 - 3000 )) ms"
     stop
   done

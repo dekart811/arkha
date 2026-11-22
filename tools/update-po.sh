@@ -13,6 +13,7 @@
 set -e
 cd "$(dirname "$0")/.."
 version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+# shellcheck disable=SC2046  # the source files, split: no spaces in their names
 xgettext --language=Rust --from-code=UTF-8 \
     --keyword=tr --keyword=trn:1,2 --keyword=n_ \
     --add-comments=TRANSLATORS: --sort-by-file \

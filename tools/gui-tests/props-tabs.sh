@@ -48,9 +48,9 @@ gt_check "Notes back in Properties" "$(tabs)" "Basic Emblems Permissions Open Wi
 # only: under Wayland, accessibility gives a dialog's tabs' places in the
 # dialog, not on the screen, so a click there would miss them.
 if [ "$BACKEND" = x11 ]; then
-xy=$(gt_a11y where-tab Basic); gt_click $xy 3; sleep 0.5; gt_shot basic-right-click
+xy=$(gt_a11y where-tab Basic); gt_click "${xy% *}" "${xy#* }" 3; sleep 0.5; gt_shot basic-right-click
 gt_check "no menu on Basic" "$(gt_a11y windows | grep -c '^$')" "0"
-xy=$(gt_a11y where-tab Permissions); gt_click $xy 3; sleep 0.5; gt_shot tab-menu
+xy=$(gt_a11y where-tab Permissions); gt_click "${xy% *}" "${xy#* }" 3; sleep 0.5; gt_shot tab-menu
 gt_key h; sleep 0.5; gt_quiet
 gt_check "Permissions hidden at once" "$(tabs)" "Basic Emblems Open With Notes "
 gt_check "and kept hidden" "$(hidden)" "checksums;permissions;"

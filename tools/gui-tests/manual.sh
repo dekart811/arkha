@@ -16,6 +16,7 @@ mkdir -p "$XDG_DATA_HOME/applications"
 EDITED=$OUT/edited
 # stand_in NAME LOG MIME: an application noting what it opens in LOG.
 stand_in() {
+  # shellcheck disable=SC2016  # a script's text: its $1 is its own
   printf '#!/bin/sh\necho "$1" >> "%s"\n' "$2" > "$OUT/$1"
   chmod +x "$OUT/$1"
   printf '[Desktop Entry]\nType=Application\nName=%s\nExec=%s %%u\nMimeType=%s;\n' "$1" "$OUT/$1" "$3" > "$XDG_DATA_HOME/applications/$1.desktop"
@@ -62,6 +63,7 @@ mkdir -p "$OUT/bin" && cp "$ARKHA" "$OUT/bin/arkha"
 ARKHA=$OUT/bin/arkha
 gt_arkha "$HOME"
 gt_act manual; sleep 1
+# shellcheck disable=SC1112  # Arkha's own apostrophe, as in its message
 gt_check "not installed: the message says so" "$(gt_a11y labels | grep -c 'The manual isn’t installed')" "1"
 gt_ok "Read It Online" gt_a11y press "Read It Online"
 ONLINE="https://github.com/dekart811/arkha/blob/$(git -C "$GT_ROOT" rev-parse --short HEAD)/docs/manual/en/index.md"

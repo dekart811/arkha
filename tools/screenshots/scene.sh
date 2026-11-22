@@ -7,7 +7,7 @@ ridge() { # ridge BASE AMP SEED -> polygon points
 sx=$(( 250 + seed * 137 % 700 )); sy=$(( 180 + seed * 53 % 160 ))
 magick -size 1200x800 "gradient:$s1-$s2" \
   -fill "$sun" -draw "circle $sx,$sy $((sx+70)),$sy" \
-  -fill "$m1" -draw "polygon $(ridge 430 70 $seed)" \
+  -fill "$m1" -draw "polygon $(ridge 430 70 "$seed")" \
   -fill "$m2" -draw "polygon $(ridge 540 50 $((seed+1)))" \
   -fill "$m3" -draw "polygon $(ridge 650 30 $((seed+2)))" \
   -blur 0x1 -quality 85 "$f"

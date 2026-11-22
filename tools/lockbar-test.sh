@@ -92,7 +92,7 @@ drag() {
     for i in $(seq 1 20); do
         xdotool mousemove $((X1 + (X2 - X1) * i / 20)) $((Y1 + (Y2 - Y1) * i / 20)); sleep 0.05
     done
-    for d in 3 -3 0; do xdotool mousemove_relative -- $d 0; sleep 0.15; done
+    for d in 3 -3 0; do xdotool mousemove_relative -- "$d" 0; sleep 0.15; done
     xdotool mouseup 1; sleep 1
 }
 

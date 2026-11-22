@@ -1,7 +1,8 @@
 #!/bin/bash
 # run-all.sh [x11|wayland ...] [-- TEST ...]: every GUI test (or the ones
 # named) on X11 and Wayland (or the backends named); a line per test, the
-# details of failures, and status 1 if any failed. Takes about 10 minutes.
+# details of failures, and status 1 if any failed. Takes 25–30 minutes
+# for each backend.
 # Build first: cargo build --release.
 D=$(cd "$(dirname "$0")" && pwd)
 backends=(); tests=()
@@ -21,6 +22,7 @@ for b in "${backends[@]}"; do
     else
       failed=1
       printf 'FAIL  %-16s %-8s %3d s\n' "$t" "$b" $(( $(date +%s) - start ))
+      # shellcheck disable=SC2001  # each line indented
       echo "$out" | sed 's/^/      /'
     fi
   done

@@ -379,6 +379,7 @@ class Run:
         self.stop = threading.Event()
         self.timeline = []
         self.closes_failed = 0
+        self.tabs, self.most_tabs, self.tab_closes_failed = None, 0, 0
         self.unanswered = set()
         self.started = time.monotonic()
         self.done = 0
@@ -582,6 +583,32 @@ class Run:
         except Exception as e:
             out.append(f"(error {e})")
         return "\n" + "\n".join(out) if depth == 0 else out
+
+    def tab_count(self):
+        """The tabs open in Arkha's windows (both panes of split view), as
+        AT-SPI sees them; None when it can't tell. The file views aren't
+        gone through (thousands of items)."""
+        skip = {"table", "tree table", "tree", "list", "list box", "layered pane", "text", "menu bar", "tool bar", "page tab"}
+        try:
+            desk = self.Atspi.get_desktop(0)
+            tabs, seen = 0, 0
+            for i in range(desk.get_child_count()):
+                app = desk.get_child_at_index(i)
+                if not app or app.get_name() != "arkha":
+                    continue
+                stack = [w for w in (app.get_child_at_index(j) for j in range(app.get_child_count())) if w and w.get_role_name() == "frame"]
+                while stack and seen < 3000:
+                    a = stack.pop()
+                    seen += 1
+                    role = a.get_role_name()
+                    if role == "page tab list":
+                        tabs += sum(1 for k in range(a.get_child_count()) if a.get_child_at_index(k).get_role_name() == "page tab")
+                    if role in skip:
+                        continue
+                    stack.extend(c for c in (a.get_child_at_index(k) for k in range(min(a.get_child_count(), 200))) if c)
+            return tabs
+        except Exception:
+            return None
 
     def describe_dialogs(self):
         return [(w.get_role_name(), w.get_name(), [n for r, n, _ in self.buttons(w)]) for w in self.dialogs()]
@@ -1044,6 +1071,22 @@ class Run:
                 continue
             if len(wins) <= 6:
                 self.closes_failed = 0
+            # Tabs open more ways than they close (clicks on folders,
+            # Open in New Tab, Reopen): without this they piled up, ~140 in
+            # 20 minutes, and memory grew with them (not a leak: --cycle
+            # stays flat). Past 8 a window (on average) one is closed.
+            if n % 10 == 0:
+                self.tabs = self.tab_count()
+                self.most_tabs = max(self.most_tabs, self.tabs or 0)
+            if (self.tabs or 0) <= 8 * len(wins):
+                self.tab_closes_failed = 0
+            elif self.tab_closes_failed < 5:
+                self.activate(self.rnd.choice(wins), "close-tab", None)
+                time.sleep(0.2)
+                self.answer_dialogs()
+                before, self.tabs = self.tabs, self.tab_count()
+                self.tab_closes_failed = self.tab_closes_failed + 1 if (self.tabs or 0) >= before else 0
+                continue
             name, kind, _, how = self.rnd.choices(actions, weights)[0]
             win = self.rnd.choice(wins)
             if how == "plain":
@@ -1084,7 +1127,7 @@ class Run:
                 rss = self.rss[-1][1] if self.rss else 0
                 st = os.statvfs(os.path.expanduser("~"))
                 free = st.f_bavail * st.f_frsize // (1 << 20)
-                self.note(f"{n} actions, {len(self.windows())} windows, {self.churned} file changes, {rss} MB, home {free} MB free")
+                self.note(f"{n} actions, {len(self.windows())} windows, {self.tab_count()} tabs, {self.churned} file changes, {rss} MB, home {free} MB free")
         self.actions_done = n
         self.stop.set()
         # Quitting must work and be quick (once nothing waits for an answer,
@@ -1142,6 +1185,7 @@ class Run:
         if self.rss:
             start = [m for t, m in self.rss[: max(1, len(self.rss) // 5)]]
             endv = [m for t, m in self.rss[-max(1, len(self.rss) // 5):]]
+            lines.append(f"Tabs at most: {self.most_tabs}")
             lines.append(f"Memory (RSS): first fifth {min(start)}–{max(start)} MB, last fifth {min(endv)}–{max(endv)} MB, highest {max(m for t, m in self.rss)} MB")
         c = getattr(self, "cycle_rss", [])
         if len(c) >= 20:

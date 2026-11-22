@@ -4,7 +4,8 @@
 # (moved and renamed with it, the URI in it updated) instead of a new one
 # being made and the old one staying behind; deleted, its thumbnail goes
 # too. Another trashed keeps its thumbnail, also once restored (Undo) and
-# trashed again; emptying the trash removes it.
+# trashed again; moved out of the trash to another folder, the thumbnail
+# goes with it; emptying the trash removes it.
 GT_A11Y=1 GT_CONF='show_thumbnails=always'
 . "$(dirname "$0")/lib.sh"
 gt_session "$@"
@@ -54,6 +55,14 @@ gt_key ctrl+z; sleep 2; gt_quiet
 gt_check "restored: its thumbnail kept, none made" "$(thumb_of "$HOME/a/other.mp4") $(gt_thumbs) $(made)" "$(uri "$HOME/a/other.mp4") 1 2"
 gt_click 600 400; gt_type other; gt_key Escape; gt_key Delete; sleep 0.5; gt_key Return; sleep 2
 gt_check "trashed again" "$([ -e "$HOME/a/other.mp4" ] && echo there || echo trashed) $(gt_thumbs)" "trashed 1"
+# Cut in the Trash and pasted into b: the thumbnail kept for it (under its
+# URI before) goes with it, none made; then trashed from there.
+gt_go trash:/// 1
+gt_click 600 400; gt_type other; gt_key Escape; gt_key ctrl+x
+gt_go "$HOME/b" 1; gt_key ctrl+v; sleep 3; gt_quiet
+gt_check "out of the trash into b: its thumbnail with it, none made" "$(thumb_of "$HOME/b/other.mp4") $(thumb_of "$HOME/a/other.mp4")$(gt_thumbs) $(made)" "$(uri "$HOME/b/other.mp4") 1 2"
+gt_click 600 400; gt_type other; gt_key Escape; gt_key Delete; sleep 0.5; gt_key Return; sleep 2
+gt_check "trashed from b" "$([ -e "$HOME/b/other.mp4" ] && echo there || echo trashed) $(gt_thumbs)" "trashed 1"
 # Its confirmation holds the action's D-Bus call until it's answered.
 gt_act empty-trash & sleep 1.5
 gt_ok "Empty Trash confirmed" gt_a11y press "Empty Trash"; sleep 2

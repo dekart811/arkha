@@ -7,6 +7,7 @@ GT_A11Y=1
 gt_session "$@"
 
 mkdir -p "$HOME/drive"
+# shellcheck disable=SC2016  # a script's text: $HOME is expanded when it runs
 printf '#!/bin/sh\ntouch "$HOME/ran"\n' > "$HOME/drive/notes.txt"
 chmod +x "$HOME/drive/notes.txt"
 gt_display

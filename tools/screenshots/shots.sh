@@ -81,7 +81,7 @@ start "$H/Pictures/Holiday"
 gt_key ctrl+a
 gt_act rename-all
 apart Holiday "$(top Rename)"
-xy=$(where where-tab Replace); [ -n "$xy" ] && gt_click $xy
+xy=$(where where-tab Replace); [ -n "$xy" ] && gt_click "${xy% *}" "${xy#* }"
 gt_key Tab; gt_type "IMG_"; gt_key Tab; gt_type "Holiday "
 gt_quiet
 shot rename "$(top Rename)"
@@ -95,7 +95,7 @@ gt_type "Lake"; sleep 6
 gt_act properties
 p=$(top Properties)
 apart Pictures "$p"
-xy=$(where where-tab Checksums); [ -n "$xy" ] && gt_click $xy && sleep 1
+xy=$(where where-tab Checksums); [ -n "$xy" ] && gt_click "${xy% *}" "${xy#* }" && sleep 1
 where press "Calculate All"; sleep 3
 shot checksums "$p"
 gt_quit

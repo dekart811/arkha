@@ -1,0 +1,7 @@
+# shellcheck's settings for the scripts in tools/: plain `shellcheck
+# tools/gui-tests/foo.sh` follows lib.sh and the other files they source.
+source-path=SCRIPTDIR
+external-sources=true
+# `ls DIR | wc -l` and `ls DIR | tr '\n' ' '`: the tests list folders
+# whose names they made (plain ASCII), and compare ls's sorted listing.
+disable=SC2012

@@ -43,7 +43,7 @@ calc() { rows button Calculate "$1"; }
 calc 0; sleep 0.4; gt_shot running
 gt_check "while SHA-256 runs the other buttons wait" "$(gt_a11y buttons | grep -cE '^Calculate( All)?\|off$')" "5"
 for _ in $(seq 60); do gt_a11y labels | grep -qx "$want" && break; sleep 0.5; done
-gt_shot done
+gt_shot "done"
 gt_check "SHA-256 matches sha256sum" "$(gt_a11y labels | grep -x "$want")" "$want"
 gt_check "and the buttons are back" "$(gt_a11y buttons | grep -cE '^Calculate( All)?\|on$')" "5"
 calc 3; sleep 0.3

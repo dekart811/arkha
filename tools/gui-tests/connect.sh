@@ -37,6 +37,7 @@ gt_key alt+b; gt_key alt+n; gt_type "Nowhere"
 gt_key Return; sleep 3; gt_quiet
 gt_check "bookmarked under its name" "$(cat "$XDG_CONFIG_HOME/gtk-3.0/bookmarks" 2>/dev/null)" "sftp://127.0.0.1:1/srv Nowhere"
 w=$(gt_a11y window-labels | tr '\n' '|')
+# shellcheck disable=SC1111  # Arkha's own quotes, as in its message
 case "$w" in *"Could not open “sftp://127.0.0.1:1/srv”"*) s=yes ;; *) s="no: $w" ;; esac
 gt_check "a server that refuses: the window says so" "$s" "yes"
 

@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Shared by the GUI tests and benchmarks (sourced, not run).
 #
 # A test calls gt_session first: outside a session it sets up a run folder
@@ -24,6 +25,7 @@ GT_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 GT_DIR=$GT_ROOT/tools/gui-tests
 GT_FIX=$GT_ROOT/target/gui-fixtures
 ARKHA=${ARKHA:-$GT_ROOT/target/release/arkha}
+GT_A11Y=${GT_A11Y:-}  # set by the test, before it sources this
 APP_ID=io.github.dekart811.Arkha
 APP_PATH=/io/github/dekart811/Arkha
 
@@ -65,6 +67,7 @@ gt_session() {
   if [ -n "$warn" ]; then
     if [ "$GT_WARNINGS" = allow ]; then echo "NOTE warnings in Arkha's log (allowed here):" >> "$OUT/result"
     else echo "FAIL warnings in Arkha's log:" >> "$OUT/result"; fi
+    # shellcheck disable=SC2001  # each line indented
     echo "$warn" | sed 's/^/       /' >> "$OUT/result"
   fi
   echo "== $GT_NAME on $BACKEND"
@@ -88,7 +91,8 @@ gt_display() {
     /usr/lib/at-spi2-registryd >/dev/null 2>&1 & GT_PIDS="$GT_PIDS $!"; sleep 0.5
   fi
   if [ "$BACKEND" = wayland ]; then
-    weston --backend=x11 --shell=${GT_WESTON_SHELL:-kiosk} ${GT_WESTON_ARGS:-} --width="$w" --height="$h" --socket=wayland-gt --idle-time=0 > "$OUT/weston.log" 2>&1 &
+    # shellcheck disable=SC2086  # GT_WESTON_ARGS: options, split
+    weston --backend=x11 --shell="${GT_WESTON_SHELL:-kiosk}" ${GT_WESTON_ARGS:-} --width="$w" --height="$h" --socket=wayland-gt --idle-time=0 > "$OUT/weston.log" 2>&1 &
     GT_PIDS="$GT_PIDS $!"
     for _ in $(seq 50); do [ -S "$XDG_RUNTIME_DIR/wayland-gt" ] && break; sleep 0.1; done; sleep 0.5
     export WAYLAND_DISPLAY=wayland-gt GDK_BACKEND=wayland
@@ -119,10 +123,10 @@ gt_arkha() {
 # gt_quiet: waits until Arkha's main thread has used no CPU for 0.4 s (at most 20 s).
 gt_quiet() {
   local last t quiet=0 n=0
-  last=$(awk '{print $14+$15}' /proc/$ARKHA_PID/task/$ARKHA_PID/stat 2>/dev/null)
+  last=$(awk '{print $14+$15}' "/proc/$ARKHA_PID/task/$ARKHA_PID/stat" 2>/dev/null)
   while [ $quiet -lt 4 ] && [ $n -lt 200 ]; do
     sleep 0.1; n=$((n+1))
-    t=$(awk '{print $14+$15}' /proc/$ARKHA_PID/task/$ARKHA_PID/stat 2>/dev/null) || return
+    t=$(awk '{print $14+$15}' "/proc/$ARKHA_PID/task/$ARKHA_PID/stat" 2>/dev/null) || return
     if [ "$t" = "$last" ]; then quiet=$((quiet+1)); else quiet=0; fi; last=$t
   done
 }

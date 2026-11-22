@@ -6,6 +6,8 @@
 gt_session "$@"
 
 TRASH=$HOME/.local/share/Trash/files
+# count DIR [FIND TESTS]: the items in DIR (not below) that pass them.
+count() { local d=$1; shift; find "$d" -mindepth 1 -maxdepth 1 "$@" 2>/dev/null | wc -l; }
 gt_display
 for n in 50 1500; do
   T=$HOME/sel$n; mkdir -p "$T"; (cd "$T" && for i in $(seq 1 $n); do : > "file$i.txt"; done)
@@ -16,7 +18,7 @@ for n in 50 1500; do
   gt_shot "pasted-$n"
   gt_key Delete; sleep 0.5; gt_key Return     # "Move to the trash?" (asked by default)
   for _ in $(seq 60); do [ "$(ls "$T" | wc -l)" -le $n ] && break; sleep 0.5; done; gt_quiet
-  gt_check "$n files: the copies trashed, the originals left" "$(ls "$T" | grep -vc copy) left, $(ls "$TRASH" | grep -c copy) copies in the trash, $(ls "$TRASH" | grep -vc copy) others" "$n left, $n copies in the trash, 0 others"
+  gt_check "$n files: the copies trashed, the originals left" "$(count "$T" ! -name '*copy*') left, $(count "$TRASH" -name '*copy*') copies in the trash, $(count "$TRASH" ! -name '*copy*') others" "$n left, $n copies in the trash, 0 others"
   rm -rf "$TRASH"; gt_quit
 done
 gt_end
