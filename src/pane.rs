@@ -42,6 +42,10 @@ pub const COL_MODE: u32 = 18;
 pub const COL_ALLOC: u32 = 19;
 pub const COL_TRASHED: u32 = 20;
 
+/// The most rows added one at a time to an icon or compact view that
+/// shows some (see Pane::add_rows).
+const ICONS_ATTACHED_MOST: usize = 500;
+
 const ATTRS: &str = "standard::name,standard::display-name,standard::type,standard::icon,\
 standard::size,standard::content-type,standard::is-hidden,standard::is-backup,\
 standard::is-symlink,standard::symlink-target,time::modified,access::can-read,\
@@ -1850,7 +1854,11 @@ impl Pane {
     /// view, which shows them at once, and a few compared with the rows
     /// there are: detaching costs time for all rows (sorting them again,
     /// selecting the selected again), each row added attached only its own
-    /// share.
+    /// share. In the icon and compact views that share grows with the rows
+    /// there (GtkIconView walks all its items for each), so no more than
+    /// ICONS_ATTACHED_MOST are added that way: a search at 40,000 results
+    /// stood still for 14 s a batch. Except while a name is edited there:
+    /// the editor is over its item.
     fn add_infos(self: &Rc<Self>, parent: &gio::File, infos: Vec<gio::FileInfo>, counts: bool) {
         self.add_rows(infos.into_iter().map(|i| (parent.clone(), i)).collect(), counts);
     }
@@ -1858,7 +1866,9 @@ impl Pane {
     /// add_infos for items of any folders: (folder, item) pairs.
     fn add_rows(self: &Rc<Self>, rows: Vec<(gio::File, gio::FileInfo)>, counts: bool) {
         let there = self.store.iter_n_children(None).max(0) as usize;
-        if rows.len() <= 20 || there == 0 || rows.len() * 4 <= there {
+        let icons = !matches!(self.mode.get(), ViewMode::List | ViewMode::Columns);
+        let too_many = icons && rows.len() > ICONS_ATTACHED_MOST && self.editing.borrow().is_none();
+        if rows.len() <= 20 || there == 0 || (rows.len() * 4 <= there && !too_many) {
             for (parent, info) in &rows {
                 self.add_info(parent, info, false);
             }
@@ -2002,8 +2012,12 @@ impl Pane {
             Some(it) if is_dir => (self.store.gv::<u64>(it, COL_SIZE as i32), self.store.gv::<String>(it, COL_SIZE_TEXT as i32)),
             _ => (size_val, size_text),
         };
-        // The URI first: a row that's there has it already.
-        let values: [(u32, &dyn ToValue); 14] = [
+        // The URI first: a row that's there has it already. The chosen
+        // details and the time trashed with the rest: each row changed on
+        // its own makes GtkIconView measure all its items again (see
+        // below), and a second change for each of thousands of rows added
+        // to a big folder froze the window for half a minute.
+        let mut values: Vec<(u32, &dyn ToValue)> = vec![
             (COL_URI, &uri),
             (COL_ICON, &icon),
             (COL_NAME, &display),
@@ -2019,6 +2033,19 @@ impl Pane {
             (COL_KEY, &key),
             (COL_ORIG, &orig),
         ];
+        if let Some(e) = &extra {
+            values.extend([
+                (COL_ATIME, &e.atime as &dyn ToValue),
+                (COL_BTIME, &e.btime),
+                (COL_OWNER, &e.owner),
+                (COL_GROUP, &e.group),
+                (COL_MODE, &e.mode),
+                (COL_ALLOC, &e.alloc),
+            ]);
+        }
+        if self.in_trash.get() {
+            values.push((COL_TRASHED, &trashed));
+        }
         match existing {
             Some(it) => {
                 // GtkIconView measures all its items again on any row
@@ -2044,11 +2071,9 @@ impl Pane {
                     return;
                 }
                 self.store.set(&it, &values[1..]);
-                self.set_extra(&it, extra.as_ref(), trashed);
             }
             None => {
                 let it = self.store.insert_with_values(None, &values);
-                self.set_extra(&it, extra.as_ref(), trashed);
                 self.index.borrow_mut().insert(uri.clone(), it);
             }
         }
@@ -2671,19 +2696,6 @@ impl Pane {
         self.meta.borrow_mut().clear();
         *self.extra_attrs.borrow_mut() = self.wanted_attrs();
         self.in_trash.set(self.is_trash());
-    }
-
-    /// The chosen details' values for a row, if they were read.
-    fn set_extra(&self, it: &gtk::TreeIter, extra: Option<&Extra>, trashed: i64) {
-        if let Some(e) = extra {
-            self.store.set(
-                it,
-                &[(COL_ATIME, &e.atime), (COL_BTIME, &e.btime), (COL_OWNER, &e.owner), (COL_GROUP, &e.group), (COL_MODE, &e.mode), (COL_ALLOC, &e.alloc)],
-            );
-        }
-        if self.in_trash.get() {
-            self.store.set(it, &[(COL_TRASHED, &trashed)]);
-        }
     }
 
     /// Reads the folder again if a detail now chosen (a column, a caption,
