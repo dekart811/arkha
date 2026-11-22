@@ -618,6 +618,9 @@ pub struct Pane {
     /// it gets the cursor too; tries.
     pending_scroll: RefCell<Option<(String, bool, f32, bool)>>,
     scroll_tries: Cell<u32>,
+    /// What the icon view gets back once it has laid its items out again
+    /// after being detached (see detached).
+    icons_place: RefCell<Option<IconsPlace>>,
     /// A selection change waits to be passed on (see emit).
     selection_pending: Cell<bool>,
     /// The open folder's display name, by its URI: asking for it is a
@@ -910,6 +913,7 @@ impl Pane {
             pending_rename: RefCell::new(None),
             pending_scroll: RefCell::new(None),
             scroll_tries: Cell::new(0),
+            icons_place: RefCell::new(None),
             editing: Rc::new(RefCell::new(None)),
             free_space: RefCell::new(None),
             loading: Cell::new(false),
@@ -952,6 +956,16 @@ impl Pane {
         });
         *pane.me.borrow_mut() = Rc::downgrade(&pane);
         pane.setup_signals();
+        {
+            // After GtkIconView's own handler, which lays the items out,
+            // and before they're painted.
+            let w = Rc::downgrade(&pane);
+            pane.icon_view.connect_size_allocate(move |_, _| {
+                if let Some(p) = w.upgrade() {
+                    p.restore_icons_place();
+                }
+            });
+        }
         pane.apply_sort(&s.sort_by, s.sort_desc);
         pane.set_mode(pane.mode.get());
         pane.apply_click_policy();
@@ -1904,9 +1918,12 @@ impl Pane {
     /// model: attached, each row added or removed costs them time in
     /// proportion to all the rows there are.
     fn detached(&self, f: impl FnOnce()) {
-        // Detaching resets scrolling and selection. Keep the selection, and
-        // the first row in view that stays there (as GTK does when rows
-        // change one at a time), or the top.
+        // Detaching resets scrolling, selection and cursor. Keep the
+        // selection; in the list the first row in view that stays there
+        // (as GTK does when rows change one at a time), or the top; in the
+        // icon and compact views the cursor and the place to the pixel,
+        // which can only be set once they're laid out again (see
+        // restore_icons_place).
         let sel = self.selected_uris();
         let in_view = |range: Option<(gtk::TreePath, gtk::TreePath)>| -> Vec<String> {
             let mut out = vec![];
@@ -1922,13 +1939,20 @@ impl Pane {
             out
         };
         let at_top = |a: Option<gtk::Adjustment>| a.is_none_or(|a| a.value() <= a.lower());
-        let icons_top = if at_top(self.icon_view.vadjustment()) { vec![] } else { in_view(self.icon_view.visible_range()) };
+        let icons = !matches!(self.mode.get(), ViewMode::List | ViewMode::Columns);
+        if icons {
+            self.keep_icons_place();
+        }
         let list_top = if at_top(self.tree_view.vadjustment()) { vec![] } else { in_view(self.tree_view.visible_range()) };
         self.detach_model();
         f();
         self.attach_model();
         if !sel.is_empty() {
-            self.select_uris(&sel);
+            if icons {
+                self.reselect_icons(&sel);
+            } else {
+                self.select_uris(&sel);
+            }
         }
         let path_of = |uris: &[String]| {
             let index = self.index.borrow();
@@ -1937,11 +1961,99 @@ impl Pane {
                 .find_map(|it| self.filter.convert_child_iter_to_iter(it))
                 .and_then(|it| self.filter.path(&it))
         };
-        if let Some(p) = path_of(&icons_top) {
-            self.scroll_icon_view(&p, true, 0.0, false);
-        }
         if let Some(p) = path_of(&list_top) {
             util::scroll_tree_to(&self.tree_view, &p, true, 0.0, 0.0);
+        }
+    }
+
+    /// Notes the icon view's cursor and place before it's detached. Not
+    /// again before they were restored: until then it isn't laid out.
+    fn keep_icons_place(&self) {
+        let gen = self.gen.get();
+        if self.icons_place.borrow().as_ref().is_some_and(|k| k.gen == gen) {
+            return;
+        }
+        let iv = &self.icon_view;
+        let uri_at = |p: &gtk::TreePath| self.filter.iter(p).map(|it| self.filter.gv::<String>(&it, COL_URI as i32));
+        let at_start = |a: Option<gtk::Adjustment>| a.is_none_or(|a| a.value() <= a.lower());
+        let at_start = at_start(iv.hadjustment()) && at_start(iv.vadjustment());
+        let mut items = vec![];
+        if !at_start {
+            if let Some((mut p, last)) = iv.visible_range() {
+                while let (Some(uri), Some(r)) = (uri_at(&p), item_rect(iv, &p)) {
+                    items.push((uri, r.x(), r.y()));
+                    if p == last || items.len() >= 200 {
+                        break;
+                    }
+                    p.next();
+                }
+            }
+        }
+        let cursor = iv.cursor().and_then(|(p, _)| uri_at(&p));
+        self.icons_place.replace(Some(IconsPlace { gen, cursor, at_start, items }));
+    }
+
+    /// Gives the icon view back what keep_icons_place noted, once it's laid
+    /// out. A scroll asked for meanwhile (to pasted items, say) goes first.
+    fn restore_icons_place(&self) {
+        let iv = &self.icon_view;
+        if self.icons_place.borrow().is_none() || iv.model().is_none() {
+            return;
+        }
+        let laid_out = self.filter.iter_n_children(None) == 0 || item_rect(iv, &gtk::TreePath::from_indicesv(&[0])).is_some();
+        if !laid_out {
+            return;
+        }
+        let Some(kept) = self.icons_place.take().filter(|k| k.gen == self.gen.get()) else { return };
+        let asked = self.pending_scroll.borrow().as_ref().map(|(_, _, _, cursor)| *cursor);
+        let path = |uri: &String| {
+            let it = self.index.borrow().get(uri).cloned()?;
+            self.filter.convert_child_iter_to_iter(&it).and_then(|it| self.filter.path(&it))
+        };
+        if asked != Some(true) {
+            // (It scrolls to the cursor: the place comes after.)
+            if let Some(p) = kept.cursor.as_ref().and_then(path) {
+                iv.set_cursor(&p, None::<&gtk::CellRenderer>, false);
+            }
+        }
+        if asked.is_some() {
+            return;
+        }
+        let (h, v) = (iv.hadjustment(), iv.vadjustment());
+        if kept.at_start {
+            for a in [h, v].into_iter().flatten() {
+                a.set_value(a.lower());
+            }
+            return;
+        }
+        let there = kept.items.iter().find_map(|(uri, x, y)| Some((item_rect(iv, &path(uri)?)?, *x, *y)));
+        if let Some((now, x, y)) = there {
+            for (a, by) in [(h, now.x() - x), (v, now.y() - y)] {
+                if let Some(a) = a {
+                    a.set_value(a.value() + by as f64);
+                }
+            }
+        }
+    }
+
+    /// Selects these items again in the icon view, without scrolling to
+    /// them or moving the cursor as select_uris does.
+    fn reselect_icons(&self, uris: &[String]) {
+        let paths: Vec<gtk::TreePath> = {
+            let index = self.index.borrow();
+            uris.iter()
+                .filter_map(|u| index.get(u))
+                .filter_map(|it| self.filter.convert_child_iter_to_iter(it))
+                .filter_map(|it| self.filter.path(&it))
+                .collect()
+        };
+        let mut indices: Vec<i32> = paths.iter().filter_map(|p| p.indices().first().copied()).collect();
+        indices.sort_unstable();
+        if !crate::iconview::IconView::set_selection(&self.icon_view, &indices) {
+            self.icon_view.unselect_all();
+            for p in &paths {
+                self.icon_view.select_path(p);
+            }
         }
     }
 
@@ -4164,11 +4276,24 @@ fn new_filter(child: &impl IsA<gtk::TreeModel>) -> gtk::TreeModelFilter {
 /// added, say). Without a cell it only reads the item's own area, which
 /// until then is -1 wide (plus the padding on both sides).
 fn cell_rect(iv: &gtk::IconView, path: &gtk::TreePath, cell: &impl IsA<gtk::CellRenderer>) -> Option<gdk::Rectangle> {
-    let item = iv.cell_rect(path, None::<&gtk::CellRenderer>)?;
-    if item.width() <= 2 * iv.item_padding() {
-        return None;
-    }
+    item_rect(iv, path)?;
     iv.cell_rect(path, Some(cell))
+}
+
+/// Where the item at `path` is in the widget, once it has been laid out.
+fn item_rect(iv: &gtk::IconView, path: &gtk::TreePath) -> Option<gdk::Rectangle> {
+    iv.cell_rect(path, None::<&gtk::CellRenderer>).filter(|r| r.width() > 2 * iv.item_padding())
+}
+
+/// See Pane::keep_icons_place.
+struct IconsPlace {
+    /// The folder or search it was in (Pane::gen).
+    gen: u64,
+    cursor: Option<String>,
+    /// Scrolled to the start: it stays there.
+    at_start: bool,
+    /// The items in view, and where each was in the widget.
+    items: Vec<(String, i32, i32)>,
 }
 
 /// The details read only when chosen (see Pane::wanted_attrs).
