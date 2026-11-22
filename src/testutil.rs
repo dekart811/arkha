@@ -34,6 +34,38 @@ impl Drop for TestDir {
     }
 }
 
+/// Runs `f` on the one thread the tests use GTK on, and gives back what it
+/// returns (or its panic). gtk-rs lets GTK be used only by the thread that
+/// set it up, and the tests run on many: models and other objects that
+/// need no display work there.
+pub fn on_gtk<R: Send + 'static>(f: impl FnOnce() -> R + Send + 'static) -> R {
+    type Job = Box<dyn FnOnce() + Send>;
+    static JOBS: std::sync::OnceLock<std::sync::mpsc::Sender<Job>> = std::sync::OnceLock::new();
+    let jobs = JOBS.get_or_init(|| {
+        let (tx, rx) = std::sync::mpsc::channel::<Job>();
+        std::thread::Builder::new()
+            .name("gtk-tests".into())
+            .spawn(move || {
+                // Models need no display; GTK just has to count as set up.
+                unsafe { gtk::set_initialized() };
+                for job in rx {
+                    job();
+                }
+            })
+            .unwrap();
+        tx
+    });
+    let (done, result) = std::sync::mpsc::channel();
+    jobs.send(Box::new(move || {
+        let _ = done.send(std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)));
+    }))
+    .unwrap();
+    match result.recv().unwrap() {
+        Ok(r) => r,
+        Err(panic) => std::panic::resume_unwind(panic),
+    }
+}
+
 /// A small random generator for the randomized tests: seeded, so a failure
 /// comes back the same on every run (the seed and the input are in the
 /// message).

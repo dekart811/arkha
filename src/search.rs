@@ -763,6 +763,20 @@ fn pick_type(parent: &impl IsA<gtk::Widget>) -> Option<(String, String)> {
 mod tests {
     use super::*;
 
+    #[test]
+    fn criteria_rows_of_each_kind() {
+        for kind in 0..6 {
+            assert_eq!(Criterion::new(kind, "file:///home/u").kind(), kind);
+        }
+        // Anything past the last kind: contained text, as Caja's last.
+        assert_eq!(Criterion::new(99, "file:///x").kind(), 5);
+        // A location row: here, with subfolders as Preferences say.
+        for on in [true, false] {
+            crate::config::set_here(|s| s.search_subfolders = on);
+            assert!(matches!(Criterion::new(0, "file:///home/u"), Criterion::Location { uri, subfolders } if uri == "file:///home/u" && subfolders == on));
+        }
+    }
+
     fn words(text: &str) -> Vec<String> {
         fold(text).split(' ').map(str::to_string).collect()
     }

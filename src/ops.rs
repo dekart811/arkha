@@ -1940,12 +1940,30 @@ pub fn note_renames(items: Vec<(String, String)>) {
     }
 }
 
-/// Renamed items' thumbnails renamed too, in a thread of their own (a
-/// renamed folder's are those of everything in it), and a renamed folder's
-/// remembered view goes with it.
+/// Renamed items' thumbnails renamed too, and a renamed folder's remembered
+/// view goes with it. As in a move: a file's at once, before the view shows
+/// it under its new name and asks for its thumbnail, which would make it
+/// again (as it did, now and then); a folder's (those of everything in it),
+/// and those of more files than are quickly done (Rename All), in a thread
+/// of their own. Only local files have thumbnails.
 fn thumbnails_renamed(items: Vec<(String, String)>) {
+    /// Files whose thumbnails are renamed at once, at most.
+    const AT_ONCE: usize = 100;
     crate::folders::follow(&items.iter().map(|(a, b)| (a.clone(), Some(b.clone()))).collect::<Vec<_>>());
-    std::thread::spawn(move || thumbcache::moved(&thumbcache::root(), &items));
+    // (Asked only of local files: elsewhere it can take a trip over the
+    // network, and there are no thumbnails to look for in it.)
+    let (mut later, now): (Vec<_>, Vec<_>) = items
+        .into_iter()
+        .partition(|(_, to)| to.starts_with("file:///") && kind_of(&gio::File::for_uri(to)) == Some(gio::FileType::Directory));
+    let root = thumbcache::root();
+    if now.len() <= AT_ONCE {
+        thumbcache::moved(&root, &now);
+    } else {
+        later.extend(now);
+    }
+    if !later.is_empty() {
+        std::thread::spawn(move || thumbcache::moved(&root, &later));
+    }
 }
 
 /// Notes a new folder or document (`template`: the file it's a copy of).
@@ -2567,6 +2585,32 @@ mod tests {
     use super::*;
     use crate::testutil::TestDir;
     use std::fs;
+
+    #[test]
+    fn titles_and_what_jobs_take_away() {
+        // (A folder that isn't there: its name is the last part.)
+        let item = |src: &str| Item { src: src.into(), dest_dir: "file:///nowhere-arkha/Docs".into(), name: None };
+        let one = vec![item("file:///a/report%20final.pdf")];
+        let two = vec![item("file:///a/x"), item("file:///a/y")];
+        let transfer = |kind, items: &Vec<Item>| Job::Transfer { kind, items: items.clone(), check: false };
+        assert_eq!(title_for(&transfer(Kind::Copy, &one)), "Copying “report final.pdf” to “Docs”");
+        assert_eq!(title_for(&transfer(Kind::Move, &two)), "Moving 2 items to “Docs”");
+        assert_eq!(title_for(&transfer(Kind::Link, &one)), "Creating links to “report final.pdf”");
+        assert_eq!(title_for(&Job::Trash(vec!["file:///a/x".into()])), "Moving 1 item to the Trash");
+        assert_eq!(title_for(&Job::Delete(vec!["a".into(), "b".into(), "c".into()])), "Deleting 3 items");
+        assert_eq!(title_for(&Job::EmptyTrash), "Emptying the Trash");
+        // Moves, trashing and deleting take their items away (a move's to
+        // somewhere new); copies and links leave them.
+        assert_eq!(taken_by(&transfer(Kind::Move, &two)), (vec!["file:///a/x".to_string(), "file:///a/y".to_string()], true));
+        assert_eq!(taken_by(&Job::Trash(vec!["t".into()])), (vec!["t".to_string()], false));
+        assert_eq!(taken_by(&Job::Delete(vec!["d".into()])), (vec!["d".to_string()], false));
+        assert_eq!(taken_by(&transfer(Kind::Copy, &two)), (vec![], false));
+        assert_eq!(taken_by(&transfer(Kind::Link, &two)), (vec![], false));
+        assert_eq!(taken_by(&Job::EmptyTrash), (vec![], false));
+        // Paused: said so, the detail on one line.
+        assert_eq!(progress_text("2 of 5\n1 MB/s", false), "2 of 5\n1 MB/s");
+        assert_eq!(progress_text("2 of 5\n1 MB/s", true), "Paused — 2 of 5 — 1 MB/s");
+    }
 
     thread_local! {
         /// The next copy checked is spoilt just before it's read back (in

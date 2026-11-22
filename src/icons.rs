@@ -868,6 +868,13 @@ fn makers() -> Arc<Pool<ThumbJob>> {
     let q = Pool::start(
         maker_count(),
         |job: ThumbJob| {
+            // Gone since it was asked for (renamed, moved or deleted while
+            // its row was still shown): nothing to make, and no failure to
+            // note.
+            if !job.src.exists() {
+                glib::g_debug!("arkha", "thumbnail: {} is gone", job.uri);
+                return (job.uri, job.mtime, job.size, None);
+            }
             let res = make_thumbnail(&job);
             if res.is_none() {
                 record_failure(&job);
@@ -1105,6 +1112,9 @@ pub fn load_at_scale(path: &std::path::Path, size: i32) -> Result<Pixbuf, glib::
 fn load_by_extension(path: &std::path::Path, size: i32) -> Option<Pixbuf> {
     let ext = path.extension()?.to_str()?;
     let format = Pixbuf::formats().into_iter().find(|f| f.extensions().iter().any(|e| e.eq_ignore_ascii_case(ext)))?;
+    // Read first: a loader has to be closed before it's dropped (else
+    // gdk-pixbuf warns), whatever happens.
+    let data = std::fs::read(path).ok()?;
     let loader = gdk_pixbuf::PixbufLoader::with_type(format.name()?.as_str()).ok()?;
     loader.connect_size_prepared(move |l, w, h| {
         if w > 0 && h > 0 {
@@ -1112,9 +1122,9 @@ fn load_by_extension(path: &std::path::Path, size: i32) -> Option<Pixbuf> {
             l.set_size(((w as f64 * scale).round() as i32).max(1), ((h as f64 * scale).round() as i32).max(1));
         }
     });
-    let data = std::fs::read(path).ok()?;
-    let loaded = loader.write(&data).and_then(|()| loader.close());
-    loaded.ok()?;
+    let written = loader.write(&data);
+    let closed = loader.close();
+    written.and(closed).ok()?;
     loader.pixbuf()
 }
 
@@ -1237,6 +1247,30 @@ mod tests {
     use crate::testutil::TestDir;
 
     #[test]
+    fn sizes_costs_and_failure_notes() {
+        // Fitted into a square, never down to nothing.
+        assert_eq!(fit(400, 200, 100), (100, 50));
+        assert_eq!(fit(200, 400, 100), (50, 100));
+        assert_eq!(fit(3000, 2, 256), (256, 1));
+        assert_eq!(fit(50, 50, 256), (256, 256));
+        // Decoding costs by the size in a picture's header; unknown, as a
+        // 16-megapixel photo.
+        let d = TestDir::new("decodecost");
+        let png = d.0.join("p.png");
+        Pixbuf::new(gdk_pixbuf::Colorspace::Rgb, false, 8, 30, 20).unwrap().savev(&png, "png", &[]).unwrap();
+        assert_eq!(decode_cost(&png), 30 * 20 * 20);
+        assert_eq!(decode_cost(&d.0.join("gone.png")), 16_000_000 * 20);
+        assert_eq!(decode_cost(&d.file("not.png", "text")), 16_000_000 * 20);
+        assert!(total_ram().is_some_and(|r| r > 64 << 20));
+        // A failure is noted under the large thumbnail's name, in Arkha's
+        // own folder of failures.
+        let uri = "file:///home/u/a%20b.mp4";
+        let note = fail_path_for(uri);
+        assert_eq!(note.file_name(), thumb_path_for(uri).file_name());
+        assert!(note.ends_with(std::path::Path::new("thumbnails/fail/arkha").join(note.file_name().unwrap())));
+    }
+
+    #[test]
     fn icons_with_custom_pictures_and_emblems() {
         let info = gio::FileInfo::new();
         info.set_icon(&gio::ThemedIcon::new("text-x-generic"));
@@ -1309,6 +1343,19 @@ mod tests {
         let text = d.0.join("t2.png");
         std::fs::write(&text, "not a picture").unwrap();
         assert!(load_at_scale(&text, 10).is_err());
+        // Not a picture, or gone: nothing, and the loader closed before
+        // it's dropped (gdk-pixbuf warns about one that isn't).
+        let unclosed = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let seen = unclosed.clone();
+        let handler = glib::log_set_handler(Some("GdkPixbuf"), glib::LogLevels::LEVEL_WARNING, false, false, move |_, _, message| {
+            if message.contains("without calling gdk_pixbuf_loader_close") {
+                seen.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            }
+        });
+        assert_eq!(load_by_extension(&text, 10).map(fit), None);
+        assert_eq!(load_by_extension(&d.0.join("gone.png"), 10).map(fit), None);
+        glib::log_remove_handler(Some("GdkPixbuf"), handler);
+        assert_eq!(unclosed.load(std::sync::atomic::Ordering::SeqCst), 0);
     }
 
     #[test]

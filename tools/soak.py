@@ -449,7 +449,9 @@ class Run:
                    "-ex", "bt 120", "-ex", "thread apply all bt 120", "-ex", "kill", "--args"] + cmd
         self.log = open(os.path.join(self.dir, "arkha.log"), "a")
         env = dict(os.environ)
-        if self.args.fatal_criticals:
+        if self.args.fatal_warnings:
+            env["G_DEBUG"] = "fatal-warnings"
+        elif self.args.fatal_criticals:
             env["G_DEBUG"] = "fatal-criticals"
         if self.args.no_a11y:
             # Arkha without its accessibility bridge (dialogs then can't be
@@ -1198,6 +1200,7 @@ def main():
     ap.add_argument("--round", help='with --cycle: the round\'s actions, e.g. "new-tab,go-uri:tree,close-tab"')
     ap.add_argument("--cycle", action="store_true", help="repeat one round of actions instead of random ones, to see whether memory keeps growing")
     ap.add_argument("--fatal-criticals", action="store_true", help="stop Arkha at the first GLib/GTK critical warning, for its backtrace")
+    ap.add_argument("--fatal-warnings", action="store_true", help="stop Arkha at the first warning (GLib's, GTK's, GVfs's…) or critical, for its backtrace")
     ap.add_argument("--inner", action="store_true", help=argparse.SUPPRESS)
     args = ap.parse_args()
     if not args.inner:

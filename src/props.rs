@@ -1542,6 +1542,16 @@ extern "C" {
 #[cfg(test)]
 mod tests {
     #[test]
+    fn mount_roots() {
+        use super::is_mount_root;
+        assert!(is_mount_root(&gio::File::for_path("/")));
+        // /proc is a file system of its own; a folder in target/ isn't one.
+        assert!(is_mount_root(&gio::File::for_path("/proc")));
+        let d = crate::testutil::TestDir::new("mountroot");
+        assert!(!is_mount_root(&gio::File::for_path(&d.0)));
+    }
+
+    #[test]
     fn web_links_have_no_properties() {
         use super::shows_properties;
         assert!(shows_properties("file:///home/u/a.mp4"));

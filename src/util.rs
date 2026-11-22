@@ -661,26 +661,50 @@ pub fn archive_argv(tool: &str, extract: bool, paths: Vec<std::ffi::OsString>) -
     std::iter::once(tool.into()).chain(flags.iter().map(|f| f.into())).chain(paths).collect()
 }
 
+/// Whether files of `ctype` are archives (for Extract Here, and custom
+/// actions for archives). By name, with the names older MIME databases give
+/// some too (.bz2 was application/x-bzip before shared-mime-info 2.3, .iso
+/// application/x-cd-image and x-iso9660-image before vnd.efi.iso), not by
+/// what a type is a kind of: OpenDocument and Office files are zip files.
 pub fn is_archive(ctype: &str) -> bool {
     const T: &[&str] = &[
         "application/zip",
         "application/x-tar",
         "application/x-compressed-tar",
         "application/x-bzip-compressed-tar",
+        "application/x-bzip2-compressed-tar",
         "application/x-xz-compressed-tar",
         "application/x-zstd-compressed-tar",
+        "application/x-lz4-compressed-tar",
+        "application/x-lzma-compressed-tar",
+        "application/x-lzip-compressed-tar",
+        "application/x-7z-compressed-tar",
+        "application/x-tarz",
+        "application/x-tzo",
         "application/x-7z-compressed",
         "application/vnd.rar",
         "application/x-rar",
+        "application/x-rar-compressed",
         "application/gzip",
         "application/x-bzip",
+        "application/x-bzip2",
         "application/x-xz",
+        "application/zstd",
+        "application/x-lz4",
         "application/x-lzma",
+        "application/x-lzip",
+        "application/x-lzop",
+        "application/x-compress",
         "application/x-cpio",
+        "application/x-archive",
+        "application/x-arj",
+        "application/vnd.ms-cab-compressed",
         "application/x-rpm",
         "application/vnd.debian.binary-package",
         "application/x-deb",
+        "application/vnd.efi.iso",
         "application/x-iso9660-image",
+        "application/x-cd-image",
         "application/java-archive",
     ];
     T.contains(&ctype)
@@ -1099,6 +1123,41 @@ pub fn preview_on(mode: &str, file: &gio::File) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn archives_by_their_type() {
+        // What GIO names them, by their file names (shared-mime-info 2.5).
+        for name in [
+            "a.zip", "a.tar", "a.tar.gz", "a.tgz", "a.tar.bz2", "a.bz2", "a.tar.xz", "a.xz", "a.tar.zst", "a.zst", "a.7z", "a.rar", "a.gz",
+            "a.lz4", "a.tar.lz4", "a.lzma", "a.tar.lzma", "a.lz", "a.tar.lz", "a.tar.Z", "a.Z", "a.cpio", "a.rpm", "a.deb", "a.iso", "a.jar",
+            "a.cab", "a.arj",
+        ] {
+            let ctype = guess_content_type(name);
+            // (A MIME database that doesn't know the name says so; the
+            // names older ones gave are checked below.)
+            if ctype != "application/octet-stream" {
+                assert!(is_archive(&ctype), "{name}: {ctype}");
+            }
+        }
+        for ctype in ["application/x-bzip", "application/x-bzip-compressed-tar", "application/x-iso9660-image", "application/x-cd-image", "application/x-rar"] {
+            assert!(is_archive(ctype), "{ctype}");
+        }
+        // Zip files inside, not archives to people.
+        for name in ["a.odt", "a.docx", "a.xlsx", "a.epub", "a.txt", "a.png", "a.pdf"] {
+            let ctype = guess_content_type(name);
+            assert!(!is_archive(&ctype), "{name}: {ctype}");
+        }
+        assert!(!is_archive("inode/directory") && !is_archive(""));
+    }
+
+    #[test]
+    fn archive_managers_have_names() {
+        for a in ARCHIVERS {
+            let name = archiver_name(a);
+            assert!(name != a && name.starts_with(char::is_uppercase), "{a}: {name}");
+        }
+        assert_eq!(archiver_name("peazip"), "peazip");
+    }
 
     #[test]
     fn archiver_set_for_archives_else_the_first_installed() {

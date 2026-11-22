@@ -164,6 +164,16 @@ mod tests {
     use super::*;
 
     #[test]
+    fn names_and_ids() {
+        let names: Vec<&str> = ALL.iter().map(|a| a.name()).collect();
+        assert_eq!(names, ["CRC32", "MD5", "SHA-1", "SHA-256", "SHA-384", "SHA-512", "BLAKE2b"]);
+        for a in ALL {
+            assert_eq!(Algo::from_id(a.id()), Some(a));
+        }
+        assert_eq!(Algo::from_id("sha3"), None);
+    }
+
+    #[test]
     fn known_checksums() {
         let t = crate::testutil::TestDir::new("checksums");
         let f = gio::File::for_path(t.file("abc", "abc"));

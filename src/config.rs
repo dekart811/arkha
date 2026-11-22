@@ -491,6 +491,13 @@ pub fn update(f: impl FnOnce(&mut Settings)) {
     save();
 }
 
+/// Changes the settings for the tests on this thread only, without saving
+/// them (a file all the tests share).
+#[cfg(test)]
+pub fn set_here(f: impl FnOnce(&mut Settings)) {
+    SETTINGS.with(|s| f(&mut s.borrow_mut()));
+}
+
 /// glib-rs has no set_string_list; write the list in KeyFile syntax.
 fn set_string_list(kf: &glib::KeyFile, group: &str, key: &str, list: &[String]) {
     let value: String = list

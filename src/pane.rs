@@ -1284,7 +1284,7 @@ impl Pane {
         let many = self.index.borrow().len() > 1000;
         self.index.borrow_mut().clear();
         self.detach_model();
-        self.store.clear();
+        empty_from_end(&self.store);
         self.attach_model();
         if many {
             util::release_memory_soon();
@@ -4124,6 +4124,19 @@ impl Pane {
 
 
 
+/// Removes every row of `store`, the last first. gtk_list_store_clear
+/// removes the first row each time, and a filter model on the store then
+/// moves the offsets of all the rows after it (views attached or not):
+/// leaving a folder of 20,000 items took 3 s, of 40,000 items 20 s.
+fn empty_from_end(store: &gtk::ListStore) {
+    // Until it's empty, whatever a handler of row-deleted might add.
+    loop {
+        let n = store.iter_n_children(None);
+        let Some(last) = (n > 0).then(|| store.iter_nth_child(None, n - 1)).flatten() else { break };
+        store.remove(&last);
+    }
+}
+
 /// A filter model on `child`. Not gtk::TreeModelFilter::new: in gtk-rs 0.18
 /// it takes a reference on top of the one gtk_tree_model_filter_new hands
 /// over (as for a floating widget, which a model isn't), so the filter,
@@ -4511,8 +4524,10 @@ mod tests {
 
     #[test]
     fn rows_of_a_list_and_its_filter() {
-        // Models need no display; GTK just has to count as set up.
-        unsafe { gtk::set_initialized() };
+        crate::testutil::on_gtk(rows_of_a_list_and_its_filter_on_gtk);
+    }
+
+    fn rows_of_a_list_and_its_filter_on_gtk() {
         let store = gtk::ListStore::new(&[String::static_type()]);
         for n in ["a", ".b", "c", ".d", "e"] {
             store.insert_with_values(None, &[(0, &n)]);
@@ -4524,6 +4539,144 @@ mod tests {
         assert_eq!(names(filter.upcast_ref()), ["a", "c", "e"]);
         store.clear();
         assert!(filter.rows().is_empty());
+
+        // Many rows emptied under a filter.
+        let store = gtk::ListStore::new(&[String::static_type()]);
+        for i in 0..40_000 {
+            store.insert_with_values(None, &[(0, &format!("f{i}"))]);
+        }
+        let filter = new_filter(&store);
+        filter.set_visible_func(|m, it| !m.gv::<String>(it, 0).ends_with('7'));
+        assert_eq!(filter.rows().len(), 36_000);
+        let started = std::time::Instant::now();
+        empty_from_end(&store);
+        // gtk_list_store_clear took about 20 s here (quadratic); this, a
+        // few milliseconds.
+        assert!(started.elapsed() < std::time::Duration::from_secs(3), "took {:?}", started.elapsed());
+        assert_eq!(store.iter_n_children(None), 0);
+        assert!(filter.rows().is_empty());
+        // Nothing to remove: nothing happens.
+        empty_from_end(&store);
+        // The filter still filters the rows that come next.
+        for n in ["a", "b7", "c"] {
+            store.insert_with_values(None, &[(0, &n)]);
+        }
+        assert_eq!(names(filter.upcast_ref()), ["a", "c"]);
+    }
+
+    #[test]
+    fn folder_rows_sort_by_every_column() {
+        crate::testutil::on_gtk(|| {
+            let folders_first = Rc::new(Cell::new(true));
+            let store = build::new_store(&folders_first);
+            // name, folder, size, mtime, atime, btime, owner, group, mode,
+            // MIME type, type, size on disk, trashed, original location, URI
+            type R = (&'static str, bool, u64, i64, i64, i64, &'static str, &'static str, u32, &'static str, &'static str, u64, i64, &'static str, &'static str);
+            let rows: [R; 5] = [
+                ("zeta", true, 0, 250, 40, 1, "root", "root", 0o40755, "inode/directory", "folder", 4096, 4, "/q", "file:///b/zeta"),
+                ("alpha.txt", false, 2000, 100, 30, 15, "bob", "users", 0o100644, "text/plain", "text", 8192, 3, "/z", "file:///b/alpha.txt"),
+                ("beta.PNG", false, 10, 200, 20, 25, "alice", "wheel", 0o100600, "image/png", "image", 4096, 1, "/m", "file:///a/beta.PNG"),
+                // As beta.PNG in all but its name: the name decides.
+                ("aardvark.png", false, 10, 200, 20, 25, "alice", "wheel", 0o100600, "image/png", "image", 4096, 1, "/m", "file:///a/aardvark.png"),
+                ("gamma", false, 500, 300, 10, 5, "Carl", "adm", 0o100755, "application/x-executable", "binary", 12288, 2, "/A", "file:///c/gamma"),
+            ];
+            for (name, dir, size, mtime, atime, btime, owner, group, mode, ctype, kind, alloc, trashed, orig, uri) in rows {
+                store.insert_with_values(
+                    None,
+                    &[
+                        (COL_NAME, &name),
+                        (COL_IS_DIR, &dir),
+                        (COL_SIZE, &size),
+                        (COL_SIZE_TEXT, &format!("{size} B")),
+                        (COL_MTIME, &mtime),
+                        (COL_MTIME_TEXT, &format!("at {mtime}")),
+                        (COL_ATIME, &atime),
+                        (COL_BTIME, &btime),
+                        (COL_OWNER, &owner),
+                        (COL_GROUP, &group),
+                        (COL_MODE, &mode),
+                        (COL_CTYPE, &ctype),
+                        (COL_TYPE, &kind),
+                        (COL_ALLOC, &alloc),
+                        (COL_TRASHED, &trashed),
+                        (COL_ORIG, &orig),
+                        (COL_URI, &uri),
+                        (COL_KEY, &collate_key(name)),
+                    ],
+                );
+            }
+            let m: gtk::TreeModel = store.clone().upcast();
+            let names = || m.rows().iter().map(|it| m.gv::<String>(it, COL_NAME as i32)).collect::<Vec<_>>();
+            let sort = |id: &str, order: gtk::SortType| {
+                // (Sorting again by the same column and order does nothing.)
+                store.set_unsorted();
+                store.set_sort_column_id(gtk::SortColumn::Index(crate::details::sort_id(id)), order);
+            };
+            // The files in the order each column sorts them, smallest
+            // first: the folder comes first, ascending or descending.
+            let (a, al, b, g) = ("aardvark.png", "alpha.txt", "beta.PNG", "gamma");
+            let expected = [
+                ("name", [a, al, b, g]),
+                ("size", [a, b, g, al]),
+                ("type", [g, a, b, al]),
+                ("mtime", [al, a, b, g]),
+                ("atime", [g, a, b, al]),
+                ("btime", [g, al, a, b]),
+                // Without regard to case: "Carl" after "bob".
+                ("owner", [a, b, al, g]),
+                ("group", [g, al, a, b]),
+                ("permissions", [a, b, al, g]),
+                ("octal", [a, b, al, g]),
+                ("mime", [g, a, b, al]),
+                // "" before "png" (or "PNG") before "txt".
+                ("extension", [g, a, b, al]),
+                // By folder: file:///a, /b, /c.
+                ("location", [a, b, al, g]),
+                ("disk", [a, b, al, g]),
+                ("trashed", [a, b, g, al]),
+                ("orig", [g, a, b, al]),
+            ];
+            assert_eq!(expected.len() as u32, crate::details::sort_count(), "a column without a check");
+            for (id, files) in expected {
+                sort(id, gtk::SortType::Ascending);
+                let mut want = vec!["zeta"];
+                want.extend(files);
+                assert_eq!(names(), want, "by {id}");
+                sort(id, gtk::SortType::Descending);
+                let mut want = vec!["zeta"];
+                want.extend(files.iter().rev());
+                assert_eq!(names(), want, "by {id}, descending");
+            }
+            // Folders among the files: by their value too.
+            folders_first.set(false);
+            sort("mtime", gtk::SortType::Ascending);
+            assert_eq!(names(), [al, a, b, "zeta", g]);
+
+            // What the columns show for beta.PNG and the folder.
+            let row = |name: &str| m.rows().into_iter().find(|it| m.gv::<String>(it, COL_NAME as i32) == name).unwrap();
+            let (file, folder) = (row(b), row("zeta"));
+            let text = |id: &str, it: &gtk::TreeIter| crate::details::text(id, &m, it);
+            assert_eq!(text("size", &file), "10 B");
+            assert_eq!(text("type", &file), "image");
+            assert_eq!(text("mtime", &file), "at 200");
+            assert_eq!(text("atime", &file), util::format_time(20));
+            assert_eq!(text("btime", &file), util::format_time(25));
+            assert_eq!(text("trashed", &file), util::format_time(1));
+            assert_eq!(text("owner", &file), "alice");
+            assert_eq!(text("group", &file), "wheel");
+            assert_eq!(text("permissions", &file), "-rw-------");
+            assert_eq!(text("permissions", &folder), "drwxr-xr-x");
+            assert_eq!(text("octal", &file), "600");
+            assert_eq!(text("mime", &file), "image/png");
+            assert_eq!(text("extension", &file), "PNG");
+            assert_eq!(text("extension", &folder), "");
+            assert_eq!(text("location", &file), "/a");
+            assert_eq!(text("disk", &file), util::format_size(4096));
+            // A folder's size on disk isn't its items': not shown.
+            assert_eq!(text("disk", &folder), "");
+            assert_eq!(text("orig", &file), "/m");
+            assert_eq!(text("bogus", &file), "");
+        });
     }
 
     #[test]
@@ -4531,6 +4684,27 @@ mod tests {
         let mut names = vec!["file10.txt", "file2.txt", "file1.txt", "file20.txt", "v1.10", "v1.9"];
         names.sort_by_key(|n| collate_key(n));
         assert_eq!(names, ["file1.txt", "file2.txt", "file10.txt", "file20.txt", "v1.9", "v1.10"]);
+    }
+
+    #[test]
+    fn mouse_buttons_for_back_and_forward() {
+        let nav = |b: u32| match nav_of(b) {
+            Some(Nav::Back) => "back",
+            Some(Nav::Forward) => "forward",
+            None => "",
+        };
+        // The defaults: 8 back, 9 forward, others nothing.
+        crate::config::set_here(|s| (s.mouse_extra_buttons, s.mouse_back_button, s.mouse_forward_button) = (true, 8, 9));
+        assert_eq!([1, 2, 3, 8, 9, 10].map(nav), ["", "", "", "back", "forward", ""]);
+        // Swapped.
+        crate::config::set_here(|s| (s.mouse_back_button, s.mouse_forward_button) = (9, 8));
+        assert_eq!([8, 9].map(nav), ["forward", "back"]);
+        // Never the main three, whatever is set.
+        crate::config::set_here(|s| (s.mouse_back_button, s.mouse_forward_button) = (1, 3));
+        assert_eq!([1, 2, 3].map(nav), ["", "", ""]);
+        // Turned off.
+        crate::config::set_here(|s| (s.mouse_extra_buttons, s.mouse_back_button, s.mouse_forward_button) = (false, 8, 9));
+        assert_eq!([8, 9].map(nav), ["", ""]);
     }
 
     #[test]
