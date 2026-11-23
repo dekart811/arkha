@@ -1055,10 +1055,12 @@ class Run:
                 self.call(APP_PATH, "org.gtk.Application", "Activate", self.GLib.Variant("(a{sv})", ({},)))
                 time.sleep(0.3)
                 continue
-            if len(wins) > 6 and self.closes_failed < 5:
+            if len(wins) > 6 and (self.closes_failed < 5 or n % 50 == 0):
                 # Plenty: close one instead of opening more. While a modal
                 # dialog is open GTK ignores that: after a few tries, go on
-                # with other actions (which answer dialogs now and then).
+                # with other actions (which answer dialogs now and then),
+                # and try again every 50 (never again, a run once went on to
+                # 40 windows and 133 tabs, and hung laying one out).
                 self.activate(self.rnd.choice(wins), "close-window", None)
                 time.sleep(0.2)
                 self.answer_dialogs()
@@ -1080,7 +1082,7 @@ class Run:
                 self.most_tabs = max(self.most_tabs, self.tabs or 0)
             if (self.tabs or 0) <= 8 * len(wins):
                 self.tab_closes_failed = 0
-            elif self.tab_closes_failed < 5:
+            elif self.tab_closes_failed < 5 or n % 50 == 0:
                 self.activate(self.rnd.choice(wins), "close-tab", None)
                 time.sleep(0.2)
                 self.answer_dialogs()

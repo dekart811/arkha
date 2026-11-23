@@ -129,6 +129,13 @@ mod imp {
         draw_focus: Cell<bool>,
         /// Mouse button 1 is down: a rubber band may be drawn.
         pressed: Cell<bool>,
+        /// A size was given while off screen (a tab not shown) and GTK's
+        /// layout skipped: it's done once the view shows (see size_allocate).
+        layout_skipped: Cell<bool>,
+        /// The last answers about its size while on screen, given while off
+        /// it: GtkIconView measures every item for each.
+        sizes: Cell<[Option<(i32, i32)>; 3]>,
+        sized_for: Cell<i32>,
         /// Cell area contexts of rows drawn: (row, first item, items, item
         /// width, row height) → context. Emptied when anything changes.
         contexts: RefCell<HashMap<RowKey, gtk::CellAreaContext>>,
@@ -734,6 +741,13 @@ mod imp {
 
     impl WidgetImpl for IconView {
         fn draw(&self, cr: &gtk::cairo::Context) -> glib::Propagation {
+            if self.layout_skipped.get() {
+                // Shown, not laid out yet (see size_allocate): nothing of
+                // the old layout.
+                let iv = self.obj();
+                gtk::render_background(&iv.style_context(), cr, 0.0, 0.0, iv.allocated_width() as f64, iv.allocated_height() as f64);
+                return glib::Propagation::Proceed;
+            }
             match self.bin_window() {
                 Some(bin) if gtk::cairo_should_draw_window(cr, &bin) && self.draw_items(cr) => glib::Propagation::Proceed,
                 _ => self.parent_draw(cr),
@@ -741,8 +755,32 @@ mod imp {
         }
 
         fn size_allocate(&self, allocation: &gtk::Allocation) {
+            // Off screen, GtkIconView would lay out every item again each
+            // time the window's size changes (tabs not shown get the new
+            // size too; a tiling window manager changes it whenever any
+            // window opens or closes). With one item a row that frees a
+            // row context per item, each found in a list: ~0.5 s for 5,000
+            // items, and a few such tabs kept Arkha from answering for over
+            // 30 s. Only the size is kept then; the layout comes when the
+            // view shows.
+            let iv = self.obj();
+            if !iv.is_mapped() {
+                iv.set_allocation(allocation);
+                self.layout_skipped.set(true);
+                return;
+            }
+            self.layout_skipped.set(false);
             self.parent_size_allocate(allocation);
             self.forget();
+        }
+
+        fn map(&self) {
+            self.parent_map();
+            if self.layout_skipped.get() {
+                // (Laid out before it's painted: the layout phase comes
+                // first in a frame.)
+                self.obj().queue_resize();
+            }
         }
 
         fn motion_notify_event(&self, event: &gdk::EventMotion) -> glib::Propagation {
@@ -777,6 +815,38 @@ mod imp {
         }
 
         fn preferred_width(&self) -> (i32, i32) {
+            self.sized(0, 0, || self.preferred_width_measured())
+        }
+
+        fn preferred_height(&self) -> (i32, i32) {
+            self.sized(1, 0, || self.preferred_height_measured())
+        }
+
+        fn preferred_height_for_width(&self, width: i32) -> (i32, i32) {
+            self.sized(2, width, || self.preferred_height_for_width_measured(width))
+        }
+    }
+
+    impl IconView {
+        /// A size answer: measured on screen (and kept), the last one kept
+        /// off it (for the same width, where it depends on one).
+        fn sized(&self, which: usize, width: i32, measure: impl FnOnce() -> (i32, i32)) -> (i32, i32) {
+            let mut kept = self.sizes.get();
+            if !self.obj().is_mapped() && (which != 2 || self.sized_for.get() == width) {
+                if let Some(v) = kept[which] {
+                    return v;
+                }
+            }
+            let v = measure();
+            kept[which] = Some(v);
+            self.sizes.set(kept);
+            if which == 2 {
+                self.sized_for.set(width);
+            }
+            v
+        }
+
+        fn preferred_width_measured(&self) -> (i32, i32) {
             let Some((n, item)) = self.big() else {
                 return self.parent_preferred_width();
             };
@@ -787,7 +857,7 @@ mod imp {
             (item + 2 * margin, all.saturating_add(2 * margin))
         }
 
-        fn preferred_height(&self) -> (i32, i32) {
+        fn preferred_height_measured(&self) -> (i32, i32) {
             // Only the scrolled window asks, and it scrolls whatever it is.
             let Some((n, item)) = self.big() else {
                 return self.parent_preferred_height();
@@ -796,7 +866,7 @@ mod imp {
             (h.min(item), h)
         }
 
-        fn preferred_height_for_width(&self, width: i32) -> (i32, i32) {
+        fn preferred_height_for_width_measured(&self, width: i32) -> (i32, i32) {
             // The scrolled window asks to tell whether it needs its
             // scrollbar: it does if even the least height is more than
             // the whole window's.

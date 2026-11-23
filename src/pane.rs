@@ -2342,7 +2342,11 @@ impl Pane {
                 }
                 p.icon_view.scroll_to_path(&path, center, align, 0.0);
             } else if p.scroll_tries.get() < 100 {
-                p.scroll_tries.set(p.scroll_tries.get() + 1);
+                // A tab not shown isn't laid out (see iconview's
+                // size_allocate): it waits without using up its tries.
+                if p.icon_view.is_mapped() {
+                    p.scroll_tries.set(p.scroll_tries.get() + 1);
+                }
                 p.retry_scroll();
             } else {
                 *p.pending_scroll.borrow_mut() = None;
