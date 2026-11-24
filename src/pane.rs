@@ -46,6 +46,12 @@ pub const COL_TRASHED: u32 = 20;
 /// shows some (see Pane::add_rows).
 const ICONS_ATTACHED_MOST: usize = 500;
 
+/// Past this many items an icon or compact view shows them as a list for
+/// the while (see Pane::check_auto_list): GtkIconView lays out every item
+/// after each change, seconds at 100,000. Back below the second.
+const AUTO_LIST_ABOVE: usize = 20_000;
+const AUTO_LIST_UNTIL_BELOW: usize = 10_000;
+
 const ATTRS: &str = "standard::name,standard::display-name,standard::type,standard::icon,\
 standard::size,standard::content-type,standard::is-hidden,standard::is-backup,\
 standard::is-symlink,standard::symlink-target,time::modified,access::can-read,\
@@ -618,6 +624,12 @@ pub struct Pane {
     /// it gets the cursor too; tries.
     pending_scroll: RefCell<Option<(String, bool, f32, bool)>>,
     scroll_tries: Cell<u32>,
+    /// Shown as a list for the many items, and the view to go back to
+    /// (see check_auto_list).
+    auto_list: Cell<Option<ViewMode>>,
+    /// The folder or search (gen) where the icons were chosen again while
+    /// it was shown as a list: not switched again there.
+    auto_list_declined: Cell<u64>,
     /// What the icon view gets back once it has laid its items out again
     /// after being detached (see detached).
     icons_place: RefCell<Option<IconsPlace>>,
@@ -913,6 +925,8 @@ impl Pane {
             pending_rename: RefCell::new(None),
             pending_scroll: RefCell::new(None),
             scroll_tries: Cell::new(0),
+            auto_list: Cell::new(None),
+            auto_list_declined: Cell::new(0),
             icons_place: RefCell::new(None),
             editing: Rc::new(RefCell::new(None)),
             free_space: RefCell::new(None),
@@ -1329,6 +1343,7 @@ impl Pane {
         }
         self.query_editor.widget.hide();
         self.clear_rows();
+        self.leave_auto_list();
         self.loading.set(true);
         *self.free_space.borrow_mut() = None;
         let file = self.current();
@@ -1826,6 +1841,7 @@ impl Pane {
             }
             _ => self.detached(|| self.remove_rows(&rows)),
         }
+        self.check_auto_list();
         self.emit(Event::Selection);
     }
 
@@ -1901,6 +1917,7 @@ impl Pane {
                 }
             });
         }
+        self.check_auto_list();
         if counts {
             let dirs: Vec<(String, std::path::PathBuf)> = rows
                 .iter()
@@ -3170,6 +3187,58 @@ impl Pane {
 
     // --------------------------------------------------------------- view options
 
+    /// Many items in an icon or compact view are shown as a list instead,
+    /// until there are few again or the user picks the icons (see
+    /// user_chose_mode); the view isn't remembered for the folder.
+    fn check_auto_list(&self) {
+        let n = self.filter.iter_n_children(None).max(0) as usize;
+        match self.auto_list.get() {
+            None => {
+                let mode = self.mode.get();
+                // Not while a name is edited (switching closes the editor):
+                // the next change comes back here.
+                if matches!(mode, ViewMode::Icon | ViewMode::Compact)
+                    && n > AUTO_LIST_ABOVE
+                    && self.auto_list_declined.get() != self.gen.get()
+                    && self.editing.borrow().is_none()
+                {
+                    self.auto_list.set(Some(mode));
+                    // Its place in the icons, kept for a batch being added
+                    // (see detached), is of no use any more.
+                    self.icons_place.replace(None);
+                    self.set_mode(ViewMode::List);
+                    self.emit(Event::Location);
+                }
+            }
+            Some(back) if n < AUTO_LIST_UNTIL_BELOW && self.editing.borrow().is_none() => {
+                self.auto_list.set(None);
+                self.set_mode(back);
+                self.emit(Event::Location);
+            }
+            Some(_) => {}
+        }
+    }
+
+    /// Before another folder or search, with its rows gone: the view the
+    /// list stood in for.
+    fn leave_auto_list(&self) {
+        if let Some(back) = self.auto_list.take() {
+            self.set_mode(back);
+        }
+    }
+
+    /// A view picked by the user: no longer one shown for the many items;
+    /// the icons picked while there are many stay.
+    pub fn user_chose_mode(&self, mode: ViewMode) {
+        if self.auto_list.take().is_some() && matches!(mode, ViewMode::Icon | ViewMode::Compact) {
+            self.auto_list_declined.set(self.gen.get());
+        }
+        if matches!(mode, ViewMode::Icon | ViewMode::Compact) && self.filter.iter_n_children(None).max(0) as usize > AUTO_LIST_ABOVE {
+            self.auto_list_declined.set(self.gen.get());
+        }
+        self.set_mode(mode);
+    }
+
     pub fn set_mode(&self, mode: ViewMode) {
         self.close_rename_editor(false);
         let sel = self.selected_uris();
@@ -3604,6 +3673,7 @@ impl Pane {
         }
         self.show_hidden.set(show);
         self.refilter();
+        self.check_auto_list();
         self.emit(Event::Selection);
     }
 
@@ -3647,7 +3717,11 @@ impl Pane {
         // Moving through the columns stays in the columns view (as in
         // Finder), whatever the folders' own views are.
         let in_columns = self.keep_columns.get() && self.mode.get() == ViewMode::Columns;
-        if mode != self.mode.get() && !in_columns {
+        if self.auto_list.get().is_some() && matches!(mode, ViewMode::Icon | ViewMode::Compact) {
+            // Still too many for icons: those are what it goes back to.
+            self.auto_list.set(Some(mode));
+        } else if mode != self.mode.get() && !in_columns {
+            self.auto_list.set(None);
             self.set_mode(mode);
         }
         let (by, desc) = fv.sort.unwrap_or((s.sort_by, s.sort_desc));
@@ -3663,7 +3737,10 @@ impl Pane {
         folders::forget(&self.current().uri());
         let s = config::get();
         let mode = ViewMode::from_str(&s.default_view);
-        if mode != self.mode.get() {
+        if self.auto_list.get().is_some() && matches!(mode, ViewMode::Icon | ViewMode::Compact) {
+            self.auto_list.set(Some(mode));
+        } else if mode != self.mode.get() {
+            self.auto_list.set(None);
             self.set_mode(mode);
         }
         self.apply_sort(&s.sort_by, s.sort_desc);
@@ -3737,6 +3814,7 @@ impl Pane {
         self.query_editor.set_query(q, &self.current());
         self.query_editor.widget.show();
         self.clear_rows();
+        self.leave_auto_list();
         self.loading.set(true);
         *self.free_space.borrow_mut() = None;
         self.apply_column_choice();
@@ -4170,8 +4248,11 @@ impl Pane {
             // TRANSLATORS: after the number of items in the status bar.
             .map(|f| fill(&tr(", Free space: {size}"), &[("size", &util::format_size(f))]))
             .unwrap_or_default();
+        // TRANSLATORS: after the number of items, when an icon or compact
+        // view shows a great many of them as a list for the while.
+        let listed = if self.auto_list.get().is_some() { tr(" — shown as a list: too many for the icon view") } else { String::new() };
         if self.loading.get() && sel.is_empty() {
-            return fill(&trn("Loading… {n} item", "Loading… {n} items", visible as u64), &[("n", &visible)]);
+            return fill(&trn("Loading… {n} item", "Loading… {n} items", visible as u64), &[("n", &visible)]) + &listed;
         }
         match sel.len() {
             0 => {
@@ -4179,7 +4260,7 @@ impl Pane {
                 if !self.show_hidden.get() && hidden > 0 && config::with(|s| s.status_hidden) {
                     s.push_str(&fill(&tr(" ({n} hidden)"), &[("n", &hidden)]));
                 }
-                s + &free
+                s + &listed + &free
             }
             1 => {
                 let r = &sel[0];

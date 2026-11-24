@@ -1254,7 +1254,7 @@ impl AppWindow {
                 if config::with(|s| s.per_folder) {
                     folders::set_view(&p.current().uri(), &v);
                 }
-                p.set_mode(ViewMode::from_str(&v));
+                p.user_chose_mode(ViewMode::from_str(&v));
                 p.grab_focus();
             }
         });

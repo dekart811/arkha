@@ -53,8 +53,10 @@ def windows(app, roles=("frame",)):
     return out
 
 
-def find(a, role, out, limit=4000, showing=True):
-    """Everything of `role` under `a` (only shown ones if `showing`), depth first."""
+def find(a, role, out, limit=4000, showing=True, crowd=None):
+    """Everything of `role` under `a` (only shown ones if `showing`), depth
+    first; not inside anything with more than `crowd` children (a file
+    view of thousands, which would use up `limit` first)."""
     stack = [a]
     while stack and limit > 0:
         limit -= 1
@@ -63,6 +65,8 @@ def find(a, role, out, limit=4000, showing=True):
             if x.get_role_name() == role and (not showing or x.get_state_set().contains(Atspi.StateType.SHOWING)):
                 out.append(x)
             n = x.get_child_count()
+            if crowd is not None and n > crowd:
+                continue
             stack.extend(c for c in (x.get_child_at_index(k) for k in range(n - 1, -1, -1)) if c)
         except GLib.Error:
             pass
@@ -161,7 +165,7 @@ def main():
     elif what == "window-labels":
         # The labels shown in the main windows (status bar, side pane, …).
         for w in windows(app):
-            for x in find(w, "label", []):
+            for x in find(w, "label", [], crowd=500):
                 if x.get_name():
                     print(x.get_name())
     elif what == "press-in":

@@ -13,6 +13,8 @@ In der **Spaltenansicht** wechseln <kbd>←</kbd> und <kbd>→</kbd> zwischen de
 
 In welcher Ansicht sich ein neuer Ordner öffnet, stellen Sie unter **Einstellungen → Ansichten → Neue Ordner anzeigen in** ein.
 
+Ein Ordner oder eine Suche mit mehr als 20.000 Objekten in der Symbol- oder Kompaktansicht wird stattdessen als Liste gezeigt, denn Symbole anzuordnen dauert dann bei jeder Änderung Sekunden; die Statusleiste sagt es. Bei weniger als 10.000 kehren die Symbole zurück. Arkha merkt sich die Liste nicht für den Ordner, und wechseln Sie selbst zurück zu den Symbolen, bleiben sie, bis Sie einen anderen Ordner oder eine andere Suche öffnen.
+
 ## Jeder Ordner, wie Sie ihn verlassen haben
 
 Arkha merkt sich die Ansicht und Sortierung jedes Ordners, die Sie ändern, sodass sich ein Ordner so öffnet, wie Sie ihn verlassen haben. **Ansicht → Ansicht auf Vorgaben zurücksetzen** lässt einen Ordner das vergessen. Abschalten oder alle Ordner auf einmal vergessen lässt es sich unter **Einstellungen → Ansichten → Einzelne Ordner**.

@@ -13,6 +13,8 @@ In the **columns view**, <kbd>←</kbd> and <kbd>→</kbd> move between the colu
 
 Which view a new folder opens in is set in **Preferences → Views → View new folders using**.
 
+A folder or search with more than 20,000 items in the icon or compact view is shown as a list instead, as icons would take seconds to arrange each time something changes; the status bar says so. With fewer than 10,000 it goes back to icons. Arkha doesn't remember the list for the folder, and if you switch back to icons yourself, they stay until you open another folder or search.
+
 ## Each folder as you left it
 
 Arkha remembers the view and sorting of each folder you change, so a folder opens the way you left it. **View → Reset View to Defaults** makes a folder forget it. Turn this off, or forget all folders at once, in **Preferences → Views → Individual Folders**.
