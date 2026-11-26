@@ -63,6 +63,8 @@ Packages for each release are on the project's Releases page, and for Arch Linux
 - **Fedora:** `sudo dnf install ./arkha-*.rpm`
 - **Arch Linux:** `sudo pacman -U ./arkha-*.pkg.tar.zst`, or from the AUR: `arkha` (built from the release's sources), `arkha-bin` (prebuilt) or `arkha-git` (the newest development version).
 
+To try the newest development version without building it: the same four packages are kept for master's latest three successful [CI runs](https://github.com/dekart811/arkha/actions/workflows/ci.yml?query=branch%3Amaster+is%3Asuccess). Open one and download from its **Artifacts** (GitHub asks you to sign in, and each comes as a zip file). They're builds of work in progress, not releases.
+
 Arkha uses GVfs for the Trash, network places and drives; most desktops have it already. To build it yourself, see [BUILDING.md](BUILDING.md). If you package Arkha for a distribution, build it from a release's git tag, never from the prebuilt files: see [Packaging Arkha for a distribution](BUILDING.md#packaging-arkha-for-a-distribution).
 
 Your settings are kept in `~/.config/arkha/`.

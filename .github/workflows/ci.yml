@@ -5,7 +5,9 @@
 # makes it: Debian 13 (with its Rust 1.85, the oldest Arkha supports),
 # Fedora and Arch Linux, and the prebuilt program for the others. Ubuntu
 # 26.04 gets the Debian package installed, as the release offers it for
-# Ubuntu too.
+# Ubuntu too. The four builds of master's newest three successful runs stay
+# for download (Actions, the run, Artifacts; GitHub asks to sign in):
+# each run's last job deletes older runs' builds.
 name: CI
 
 on:
@@ -67,12 +69,14 @@ jobs:
       # Its dependencies resolve, from Debian's own repositories.
       - name: Install it
         run: apt-get install -y ./target/deb/*.deb
-      # For the Ubuntu job: the release's .deb is this one.
+      # For the Ubuntu job (the release's .deb is this one), and for download;
+      # a pull request's only for the Ubuntu job.
       - uses: actions/upload-artifact@v7
         with:
-          name: deb-debian
+          name: arkha-deb
           path: target/deb/*.deb
           if-no-files-found: error
+          retention-days: ${{ github.event_name == 'pull_request' && 1 || 90 }}
 
   # The release offers the Debian package for Ubuntu too: installed there.
   ubuntu:
@@ -83,7 +87,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v8
         with:
-          name: deb-debian
+          name: arkha-deb
           path: debian-deb
       # Its dependencies resolve, from Ubuntu's own repositories.
       - name: Install it
@@ -106,6 +110,13 @@ jobs:
         run: sh packaging/tarball/build.sh
       - name: Its files
         run: tar -tzvf target/tarball/*.tar.gz
+      # For download (not a pull request's: anyone can send one).
+      - uses: actions/upload-artifact@v7
+        if: github.event_name != 'pull_request'
+        with:
+          name: arkha-prebuilt
+          path: target/tarball/*.tar.gz
+          if-no-files-found: error
 
   fedora:
     name: Fedora package
@@ -123,6 +134,12 @@ jobs:
       # Its dependencies resolve, from Fedora's own repositories.
       - name: Install it
         run: dnf install -y target/rpm/*.rpm
+      - uses: actions/upload-artifact@v7
+        if: github.event_name != 'pull_request'
+        with:
+          name: arkha-rpm
+          path: target/rpm/*.rpm
+          if-no-files-found: error
 
   arch:
     name: Arch Linux package
@@ -146,3 +163,39 @@ jobs:
         run: pacman -Qlp packaging/arch/*.pkg.tar.zst
       - name: Install it
         run: pacman -U --noconfirm packaging/arch/*.pkg.tar.zst
+      - uses: actions/upload-artifact@v7
+        if: github.event_name != 'pull_request'
+        with:
+          name: arkha-arch
+          path: packaging/arch/*.pkg.tar.zst
+          if-no-files-found: error
+
+  # Only the builds of master's newest three successful runs stay (this one
+  # among them): older CI runs' are deleted. The release workflow's aren't
+  # touched (the release has its files).
+  cleanup:
+    name: Keep the newest three runs' builds
+    needs: [ubuntu, prebuilt, fedora, arch]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: write
+    steps:
+      - name: Delete older runs' builds
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          THIS_RUN: ${{ github.run_id }}
+        run: |
+          runs=$(gh api --paginate "repos/$REPO/actions/workflows/ci.yml/runs?per_page=100" --jq '.workflow_runs[] | [.id, .head_branch, .event, .conclusion // "", .created_at] | @tsv')
+          # This run, and the two newest earlier ones on master that succeeded.
+          keep=$( { echo "$THIS_RUN"; echo "$runs" | awk -F'\t' -v me="$THIS_RUN" '$1 != me && $2 == "master" && $3 != "pull_request" && $4 == "success"' | sort -t$'\t' -k5,5r | head -2 | cut -f1; } | sort -u)
+          echo "Keeping the builds of runs: $(echo "$keep" | tr '\n' ' ')"
+          ci=$(echo "$runs" | cut -f1 | sort -u)
+          gh api --paginate "repos/$REPO/actions/artifacts?per_page=100" --jq '.artifacts[] | select(.expired | not) | [.id, .workflow_run.id, .name] | @tsv' |
+          while IFS=$'\t' read -r id run name; do
+            echo "$ci" | grep -qx "$run" || continue      # not CI's (the release's)
+            echo "$keep" | grep -qx "$run" && continue    # one of the newest three
+            echo "Deleting $name of run $run"
+            gh api -X DELETE "repos/$REPO/actions/artifacts/$id"
+          done
