@@ -4,11 +4,12 @@
 # folder arkha-<version>-<arch>/ holding arkha (it runs from there too, with
 # its translations), arkha.desktop, arkha.svg, the AppStream metainfo
 # (io.github.dekart811.Arkha.metainfo.xml), locale/, manual/, LICENSE and
-# README.md. <version> is Cargo.toml's. Needs what building Arkha needs (see
+# README.md. <version> is Cargo.toml's, or the file VERSION's where there is
+# one (the build too, see build-version.sh). Needs what building Arkha needs (see
 # BUILDING.md).
 set -e
 cd "$(dirname "$0")/../.."
-version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n1)
+version=$(cat VERSION 2>/dev/null || sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n1)
 arch=$(uname -m)
 cargo build --release --locked
 

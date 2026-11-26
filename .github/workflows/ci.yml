@@ -7,8 +7,9 @@
 # 26.04 gets the Debian package installed, as the release offers it for
 # Ubuntu too. The four builds of master's newest three successful runs stay
 # for download (Actions, the run, Artifacts; GitHub asks to sign in), each
-# as its own file, not zipped again (archive: false: named after the file):
-# each run's last job deletes older runs' builds.
+# as its own file, not zipped again (archive: false: named after the file,
+# which has the version with the commit): each run's last job deletes older
+# runs' builds.
 name: CI
 
 on:
@@ -62,6 +63,14 @@ jobs:
           apt-get update
           apt-get install -y --no-install-recommends ca-certificates git cargo rustc libgtk-3-dev gettext pkg-config build-essential dpkg-dev
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      # Its version with the commit, as the files are named (VERSION; see
+      # packaging/build-version.sh): the whole history to count it.
+      - name: Note the build
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          sh packaging/build-version.sh | tee VERSION
       # Debian's own Rust: 1.85, the oldest Arkha supports.
       - name: Build the package
         run: sh packaging/deb/build.sh
@@ -104,6 +113,14 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      # Its version with the commit, as the files are named (VERSION; see
+      # packaging/build-version.sh): the whole history to count it.
+      - name: Note the build
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          sh packaging/build-version.sh | tee VERSION
       - name: Install GTK 3 and gettext
         run: |
           sudo apt-get update
@@ -130,6 +147,14 @@ jobs:
       - name: Install the build dependencies
         run: dnf install -y git cargo rust gcc gtk3-devel gettext rpm-build
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      # Its version with the commit, as the files are named (VERSION; see
+      # packaging/build-version.sh): the whole history to count it.
+      - name: Note the build
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          sh packaging/build-version.sh | tee VERSION
       - name: Build the package
         run: sh packaging/rpm/build.sh
       - name: Its files

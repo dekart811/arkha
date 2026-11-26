@@ -27,17 +27,12 @@ replace-with = "vendored-sources"
 [source.vendored-sources]
 directory = "vendor"
 EOF
-version="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n1)"
-# The PKGBUILD's version line is always changed by makepkg: not counted.
-dirty=
-[ -n "$(git status --porcelain --untracked-files=no -- . ':!packaging/arch/PKGBUILD')" ] && dirty=.dirty
-if [ -n "$dirty" ] || ! git describe --exact-match --tags --match "v$version" >/dev/null 2>&1; then
-    version="$version+r$(git rev-list --count HEAD).g$(git rev-parse --short HEAD)$dirty"
-fi
-echo "$version" > "$st/VERSION"
+sh packaging/build-version.sh > "$st/VERSION"
 
 rsync -az --delete --exclude=/target "$st/" "$host:arkha-build/"
+# shellcheck disable=SC2029  # the path is meant for HOST
 ssh "$host" "sh arkha-build/$script"
 rsync -a "$host:arkha-build/$results" "$out/"
 # shellcheck disable=SC2086
+# shellcheck disable=SC2046  # a pattern, meant to expand
 ls -l "$out"/$(basename "$results")
