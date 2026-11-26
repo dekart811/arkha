@@ -6,7 +6,8 @@
 # Fedora and Arch Linux, and the prebuilt program for the others. Ubuntu
 # 26.04 gets the Debian package installed, as the release offers it for
 # Ubuntu too. The four builds of master's newest three successful runs stay
-# for download (Actions, the run, Artifacts; GitHub asks to sign in):
+# for download (Actions, the run, Artifacts; GitHub asks to sign in), each
+# as its own file, not zipped again (archive: false: named after the file):
 # each run's last job deletes older runs' builds.
 name: CI
 
@@ -73,8 +74,8 @@ jobs:
       # a pull request's only for the Ubuntu job.
       - uses: actions/upload-artifact@v7
         with:
-          name: arkha-deb
           path: target/deb/*.deb
+          archive: false
           if-no-files-found: error
           retention-days: ${{ github.event_name == 'pull_request' && 1 || 90 }}
 
@@ -85,9 +86,11 @@ jobs:
     runs-on: ubuntu-24.04
     container: ubuntu:26.04
     steps:
+      # Named after its file (see the Debian job), which has the version.
       - uses: actions/download-artifact@v8
         with:
-          name: arkha-deb
+          pattern: arkha_*.deb
+          merge-multiple: true
           path: debian-deb
       # Its dependencies resolve, from Ubuntu's own repositories.
       - name: Install it
@@ -114,8 +117,8 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: github.event_name != 'pull_request'
         with:
-          name: arkha-prebuilt
           path: target/tarball/*.tar.gz
+          archive: false
           if-no-files-found: error
 
   fedora:
@@ -137,8 +140,8 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: github.event_name != 'pull_request'
         with:
-          name: arkha-rpm
           path: target/rpm/*.rpm
+          archive: false
           if-no-files-found: error
 
   arch:
@@ -166,8 +169,8 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: github.event_name != 'pull_request'
         with:
-          name: arkha-arch
           path: packaging/arch/*.pkg.tar.zst
+          archive: false
           if-no-files-found: error
 
   # Only the builds of master's newest three successful runs stay (this one
