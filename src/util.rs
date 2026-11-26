@@ -251,6 +251,16 @@ pub fn save_settings(kf: &glib::KeyFile, path: &std::path::Path) {
     }
 }
 
+/// Arkha's version with its build (see build.rs), as About and --version
+/// show it, for bug reports: "1.0.0-dev (r142, 6a7d287)" when built in a git
+/// checkout (a release too), "1.0.0" from sources without one.
+pub fn version() -> String {
+    match env!("ARKHA_BUILD") {
+        "" => env!("CARGO_PKG_VERSION").to_string(),
+        build => format!("{} ({build})", env!("CARGO_PKG_VERSION")),
+    }
+}
+
 /// Arkha's own icon (`arkha`, installed in the hicolor theme), or the icon
 /// theme's file manager icon where it isn't installed, as when run from the
 /// build folder.

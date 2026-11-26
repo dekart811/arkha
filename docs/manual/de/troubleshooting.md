@@ -49,7 +49,7 @@ Um mit den üblichen Einstellungen neu anzufangen, beenden Sie Arkha und lösche
 
 Bitte melden Sie Fehler und Ideen im [Issue-Tracker von Arkha auf GitHub](https://github.com/dekart811/arkha/issues). Es hilft, wenn Sie angeben:
 
-- Arkhas Version und Build, aus **Hilfe → Info**,
+- Arkhas Version und Build, aus **Hilfe → Info** oder `arkha --version`,
 - Ihre Distribution und Arbeitsumgebung (oder Ihren Fenstermanager) und ob es X11 oder Wayland ist,
 - was Sie getan haben, was passiert ist und was Sie erwartet hatten,
 - was Arkha in einem Terminal ausgibt: Starten Sie es dort mit `arkha` und tun Sie es noch einmal.

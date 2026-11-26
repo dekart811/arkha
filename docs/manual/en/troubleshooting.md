@@ -49,7 +49,7 @@ To start over with the usual settings, quit Arkha and delete `~/.config/arkha/ar
 
 Please report bugs and ideas on [Arkha's issue tracker on GitHub](https://github.com/dekart811/arkha/issues). It helps to say:
 
-- Arkha's version and build, from **Help → About**,
+- Arkha's version and build, from **Help → About** or `arkha --version`,
 - your distribution and desktop (or window manager), and whether it's X11 or Wayland,
 - what you did, what happened, and what you expected,
 - what Arkha writes in a terminal: start it from one with `arkha` and do it again.

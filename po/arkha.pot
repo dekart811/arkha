@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: Arkha 1.3.0-dev\n"
+"Project-Id-Version: Arkha 1.3.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-24 01:00+0100\n"
+"POT-Creation-Date: 2026-11-26 14:03+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -208,7 +208,7 @@ msgstr ""
 msgid "Could not extract the files"
 msgstr ""
 
-#: src/autorun.rs:194 src/window.rs:3398
+#: src/autorun.rs:194 src/window.rs:3394
 #, rust-format
 msgid "Could not open “{name}”"
 msgstr ""
@@ -425,7 +425,7 @@ msgid "Backgrounds and Emblems"
 msgstr ""
 
 #: src/backgrounds.rs:231 src/bulkrename.rs:566 src/props.rs:86
-#: src/window.rs:2241 src/window.rs:3328 src/window.rs:3440 src/window.rs:3455
+#: src/window.rs:2241 src/window.rs:3328 src/window.rs:3436 src/window.rs:3451
 msgid "_Close"
 msgstr ""
 
@@ -915,7 +915,7 @@ msgid "Original Location"
 msgstr ""
 
 #: src/i18n.rs:157 src/i18n.rs:158 src/i18n.rs:159 src/info.rs:255
-#: src/ops.rs:1591 src/pane.rs:1625 src/pane.rs:4250 src/props.rs:427
+#: src/ops.rs:1591 src/pane.rs:1625 src/pane.rs:4259 src/props.rs:427
 #: src/props.rs:608
 #, rust-format
 msgid "{n} item"
@@ -1114,7 +1114,7 @@ msgstr ""
 msgid "Opening"
 msgstr ""
 
-#: src/keys.rs:59 src/window.rs:3492
+#: src/keys.rs:59 src/window.rs:3488
 msgid "Open in new tab"
 msgstr ""
 
@@ -1355,6 +1355,15 @@ msgstr ""
 
 #: src/keys.rs:120
 msgid "About"
+msgstr ""
+
+#: src/main.rs:60
+msgid "Show Arkha's version and quit"
+msgstr ""
+
+#. TRANSLATORS: in --help's first line, after "arkha [OPTION…]".
+#: src/main.rs:64
+msgid "[FOLDER…]"
 msgstr ""
 
 #: src/ops.rs:195
@@ -1870,74 +1879,74 @@ msgstr ""
 msgid "_Visible Columns…"
 msgstr ""
 
-#: src/pane.rs:4140 src/props.rs:1454
+#: src/pane.rs:4149 src/props.rs:1454
 msgid "Could not change the emblems"
 msgstr ""
 
-#: src/pane.rs:4156
+#: src/pane.rs:4165
 msgid "Could not change the background"
 msgstr ""
 
 #. TRANSLATORS: after the number of items in the status bar.
-#: src/pane.rs:4240
+#: src/pane.rs:4249
 #, rust-format
 msgid ", Free space: {size}"
 msgstr ""
 
 #. TRANSLATORS: after the number of items, when an icon or compact
 #. view shows a great many of them as a list for the while.
-#: src/pane.rs:4244
+#: src/pane.rs:4253
 msgid " — shown as a list: too many for the icon view"
 msgstr ""
 
-#: src/pane.rs:4246
+#: src/pane.rs:4255
 #, rust-format
 msgid "Loading… {n} item"
 msgid_plural "Loading… {n} items"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/pane.rs:4252
+#: src/pane.rs:4261
 #, rust-format
 msgid " ({n} hidden)"
 msgstr ""
 
 #. TRANSLATORS: {count} is a folder's number of items: "12 items".
-#: src/pane.rs:4264
+#: src/pane.rs:4273
 #, rust-format
 msgid "“{name}” selected (containing {count})"
 msgstr ""
 
-#: src/pane.rs:4265
+#: src/pane.rs:4274
 #, rust-format
 msgid "“{name}” selected"
 msgstr ""
 
-#: src/pane.rs:4268
+#: src/pane.rs:4277
 #, rust-format
 msgid "“{name}” selected ({size})"
 msgstr ""
 
-#: src/pane.rs:4276
+#: src/pane.rs:4285
 #, rust-format
 msgid "{n} item selected ({size})"
 msgid_plural "{n} items selected ({size})"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/pane.rs:4277 src/pane.rs:4282
+#: src/pane.rs:4286 src/pane.rs:4291
 #, rust-format
 msgid "{n} folder selected"
 msgid_plural "{n} folders selected"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/pane.rs:4280
+#: src/pane.rs:4289
 #, rust-format
 msgid "{folders}, {others} ({size})"
 msgstr ""
 
-#: src/pane.rs:4283
+#: src/pane.rs:4292
 #, rust-format
 msgid "{n} other item selected"
 msgid_plural "{n} other items selected"
@@ -2028,7 +2037,7 @@ msgstr ""
 msgid "Counting…"
 msgstr ""
 
-#: src/props.rs:382 src/util.rs:407
+#: src/props.rs:382 src/util.rs:417
 msgid "Unknown"
 msgstr ""
 
@@ -2637,41 +2646,41 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: a time today, in strftime's notation (%H hours, %M minutes).
-#: src/util.rs:335
+#: src/util.rs:345
 msgid "Today %H:%M"
 msgstr ""
 
 #. TRANSLATORS: a time yesterday, in strftime's notation.
-#: src/util.rs:337
+#: src/util.rs:347
 msgid "Yesterday %H:%M"
 msgstr ""
 
 #. TRANSLATORS: a date and time in strftime's notation: %-d the day,
 #. %b the month's short name, %Y the year. Order it as your language does.
-#: src/util.rs:340
+#: src/util.rs:350
 msgid "%-d %b %Y %H:%M"
 msgstr ""
 
 #. TRANSLATORS: a full date and time in strftime's notation: %A the
 #. weekday, %-d the day, %B the month, %Y the year.
-#: src/util.rs:405
+#: src/util.rs:415
 msgid "%A, %-d %B %Y, %H:%M:%S"
 msgstr ""
 
 #. TRANSLATORS: the name for another item of the same name: "photo (2).jpg".
-#: src/util.rs:448
+#: src/util.rs:458
 #, rust-format
 msgid "{name} ({number}){extension}"
 msgstr ""
 
 #. TRANSLATORS: the name of a copy pasted beside its original: "photo (copy).jpg".
-#: src/util.rs:460
+#: src/util.rs:470
 #, rust-format
 msgid "{name} (copy){extension}"
 msgstr ""
 
 #. TRANSLATORS: the name of a further copy: "photo (copy 2).jpg".
-#: src/util.rs:466
+#: src/util.rs:476
 #, rust-format
 msgid "{name} (copy {number}){extension}"
 msgstr ""
@@ -3025,78 +3034,78 @@ msgstr ""
 msgid "Edit Bookmarks"
 msgstr ""
 
-#: src/window.rs:3363
+#: src/window.rs:3359
 msgid "A fast graphical file manager."
 msgstr ""
 
-#: src/window.rs:3363
+#: src/window.rs:3359
 msgid "This program comes with absolutely no warranty."
 msgstr ""
 
-#: src/window.rs:3370
+#: src/window.rs:3366
 msgid "_License"
 msgstr ""
 
-#: src/window.rs:3370
+#: src/window.rs:3366
 msgid "_Source Code"
 msgstr ""
 
-#: src/window.rs:3422
+#: src/window.rs:3418
 msgid "Could not open the manual"
 msgstr ""
 
-#: src/window.rs:3436
+#: src/window.rs:3432
 msgid "The manual isn’t installed"
 msgstr ""
 
-#: src/window.rs:3438
+#: src/window.rs:3434
 #, rust-format
 msgid ""
 "It wasn’t found in:\n"
 "{places}"
 msgstr ""
 
-#: src/window.rs:3439
+#: src/window.rs:3435
 msgid "You can read this version’s manual online instead."
 msgstr ""
 
-#: src/window.rs:3441
+#: src/window.rs:3437
 msgid "Read It _Online"
 msgstr ""
 
-#: src/window.rs:3455 src/window/prefs.rs:897
+#: src/window.rs:3451 src/window/prefs.rs:897
 msgid "Keyboard Shortcuts"
 msgstr ""
 
-#: src/window.rs:3491
+#: src/window.rs:3487
 msgid "Mouse"
 msgstr ""
 
-#: src/window.rs:3492
+#: src/window.rs:3488
 msgid "Middle-click a folder"
 msgstr ""
 
-#: src/window.rs:3493
+#: src/window.rs:3489
 msgid "Copy / Move / Ask"
 msgstr ""
 
-#: src/window.rs:3493
+#: src/window.rs:3489
 msgid "Drag with Ctrl / Shift / Alt"
 msgstr ""
 
-#: src/window.rs:3494
+#: src/window.rs:3490
 msgid "Ctrl+scroll"
 msgstr ""
 
-#: src/window.rs:3494 src/window/prefs.rs:164
+#: src/window.rs:3490 src/window/prefs.rs:164
 msgid "Zoom"
 msgstr ""
 
-#: src/window.rs:3495
+#: src/window.rs:3491
 msgid "Back / Forward"
 msgstr ""
 
-#: src/window.rs:3495
+#: src/window.rs:3491
 msgid "Back / forward mouse buttons"
 msgstr ""
 

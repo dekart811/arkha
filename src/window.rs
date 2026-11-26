@@ -3352,11 +3352,7 @@ impl AppWindow {
         d.set_transient_for(Some(&self.window));
         d.set_modal(true);
         d.set_program_name("Arkha");
-        // With the build (see build.rs), for bug reports: "1.0.0-dev (r142, 6a7d287)".
-        let version = match env!("ARKHA_BUILD") {
-            "" => env!("CARGO_PKG_VERSION").to_string(),
-            build => format!("{} ({build})", env!("CARGO_PKG_VERSION")),
-        };
+        let version = util::version();
         d.set_version(Some(&version));
         // GPLv3's "Appropriate Legal Notices": no warranty (here), and
         // how to see the license (its button).

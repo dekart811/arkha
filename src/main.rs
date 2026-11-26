@@ -50,6 +50,25 @@ fn main() -> glib::ExitCode {
         Some("io.github.dekart811.Arkha"),
         gio::ApplicationFlags::HANDLES_OPEN,
     );
+    // -v, --version: the version, then done, before any window or a running
+    // Arkha is asked to open one.
+    app.add_main_option(
+        "version",
+        glib::Char::from(b'v'),
+        glib::OptionFlags::NONE,
+        glib::OptionArg::None,
+        &i18n::tr("Show Arkha's version and quit"),
+        None,
+    );
+    // TRANSLATORS: in --help's first line, after "arkha [OPTION…]".
+    app.set_option_context_parameter_string(Some(&i18n::tr("[FOLDER…]")));
+    app.connect_handle_local_options(|_, options| {
+        if options.contains("version") {
+            println!("Arkha {}", util::version());
+            return 0;
+        }
+        -1
+    });
     app.connect_startup(|app| {
         let quit = gio::SimpleAction::new("quit", None);
         let a = app.clone();
