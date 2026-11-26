@@ -44,16 +44,16 @@ The [full list of features](docs/FEATURES.md) has every detail, and [the manual]
 
 Arkha opens big folders sooner and with less memory than Caja and Nemo, and scrolls through them with less work:
 
-| | Arkha 1.2.0 | Caja 1.28 | Nemo 6.8 |
+| | Arkha 1.3.0 | Caja 1.28 | Nemo 6.8 |
 |---|---|---|---|
-| Opening `/usr/lib` (4,442 items) | **1.17 s** | 1.71 s | 2.02 s |
-| Opening a folder of 20,000 files | **2.14 s** | 2.77 s | 3.20 s |
-| Memory with the 20,000 files open | **181 MB** | 232 MB | 230 MB |
-| CPU time for scrolling through them | **0.40 s** | 0.72 s | 2.47 s |
+| Opening `/usr/lib` (4,594 items) | **1.39 s** | 1.83 s | 2.46 s |
+| Opening a folder of 20,000 files | **2.14 s** | 2.67 s | 3.13 s |
+| Memory with the 20,000 files open | **182 MB** | 232 MB | 231 MB |
+| CPU time for scrolling through them | **0.39 s** | 0.69 s | 2.52 s |
 
 It also makes thumbnails only for the files in sight, not for the whole folder at once.
 
-Each program opened each folder three times in the same private, headless X server, on the same machine (8 virtual CPUs); the table shows the medians. A folder counts as open once the program's main thread goes idle. Measured on 20 November 2026 with [`tools/bench/compare.sh`](tools/bench/compare.sh), which you can run yourself: results differ from machine to machine, but the order shouldn't.
+Each program opened each folder three times in the same private, headless X server, on the same machine (8 virtual CPUs); the table shows the medians. A folder counts as open once the program's main thread goes idle. Measured on 25 November 2026 with [`tools/bench/compare.sh`](tools/bench/compare.sh), which you can run yourself: results differ from machine to machine, but the order shouldn't.
 
 ## Installing
 
