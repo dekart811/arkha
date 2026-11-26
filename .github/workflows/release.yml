@@ -89,7 +89,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libgtk-3-dev gettext
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable, 2026-11-15
         with:
           components: clippy
       - name: Build
@@ -118,7 +118,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libgtk-3-dev gettext
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable, 2026-11-15
       - name: Build
         # A release's About window shows just its version (see build.rs).
         run: ARKHA_BUILD= packaging/tarball/build.sh
